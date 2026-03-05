@@ -38,7 +38,7 @@ Enable CodexSharpSDK to participate as a first-class provider in the `Microsoft.
 
 - `ChatOptions.ModelId` maps to `ThreadOptions.Model`.
 - `ChatOptions.ConversationId` triggers thread resume via `ResumeThread(id)`.
-- Multiple `ChatMessage` entries are concatenated into a single prompt (Codex CLI is single-prompt-per-turn).
+- Multiple `ChatMessage` entries are concatenated into a single prompt while preserving original message chronology (Codex CLI is single-prompt-per-turn).
 - `ChatOptions.Tools` is silently ignored; tool results surface as custom `AIContent` types.
 - `GetService<ChatClientMetadata>()` returns provider name `"CodexCLI"` with default model from options.
 - Streaming events map item-level, not token-level.
@@ -65,6 +65,78 @@ Enable CodexSharpSDK to participate as a first-class provider in the `Microsoft.
    - Trigger: `client.GetResponseAsync(messages, new ChatOptions { ConversationId = "thread-123" })`
    - Steps: resume thread with ID → RunAsync → map result
    - Result: Continuation in existing Codex conversation
+
+---
+
+## Repository Additions (baseline: `bc11f2f2a7d546f34155d88a4800095be840921a`)
+
+### Projects added to solution
+
+- `CodexSharpSDK.Extensions.AI/CodexSharpSDK.Extensions.AI.csproj`
+  - `ManagedCode.CodexSharpSDK.Extensions.AI` package
+  - `IChatClient` adapter (`CodexChatClient`) and DI extensions
+- `CodexSharpSDK.Extensions.AI.Tests/CodexSharpSDK.Extensions.AI.Tests.csproj`
+  - mapper/DI test coverage for M.E.AI integration
+
+### Major artifacts introduced
+
+- Adapter entry points: `CodexChatClient`, `CodexChatClientOptions`, `CodexServiceCollectionExtensions`
+- Mapping layer: `ChatMessageMapper`, `ChatOptionsMapper`, `ChatResponseMapper`, `StreamingEventMapper`
+- Rich content models: `CommandExecutionContent`, `FileChangeContent`, `McpToolCallContent`, `WebSearchContent`, `CollabToolCallContent`
+- Docs: ADR `003` and this feature specification
+
+---
+
+## How to Obtain `IChatClient`
+
+### Option 1: Direct construction
+
+```csharp
+using Microsoft.Extensions.AI;
+using ManagedCode.CodexSharpSDK.Extensions.AI;
+using ManagedCode.CodexSharpSDK.Models;
+
+IChatClient client = new CodexChatClient(new CodexChatClientOptions
+{
+    DefaultModel = CodexModels.Gpt53Codex,
+});
+```
+
+### Option 2: Standard DI registration
+
+```csharp
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using ManagedCode.CodexSharpSDK.Extensions.AI.Extensions;
+using ManagedCode.CodexSharpSDK.Models;
+
+var services = new ServiceCollection();
+services.AddCodexChatClient(options =>
+{
+    options.DefaultModel = CodexModels.Gpt53Codex;
+});
+
+using var provider = services.BuildServiceProvider();
+var chatClient = provider.GetRequiredService<IChatClient>();
+```
+
+### Option 3: Keyed DI registration
+
+```csharp
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using ManagedCode.CodexSharpSDK.Extensions.AI.Extensions;
+using ManagedCode.CodexSharpSDK.Models;
+
+var services = new ServiceCollection();
+services.AddKeyedCodexChatClient("codex-main", options =>
+{
+    options.DefaultModel = CodexModels.Gpt53Codex;
+});
+
+using var provider = services.BuildServiceProvider();
+var keyedClient = provider.GetRequiredKeyedService<IChatClient>("codex-main");
+```
 
 ---
 

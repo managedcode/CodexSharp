@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("ManagedCode.CodexSharpSDK.Extensions.AI.Tests")]
+[assembly: InternalsVisibleTo("ManagedCode.CodexSharpSDK.Tests")]

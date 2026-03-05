@@ -16,9 +16,11 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../CodexSharpSDK/CodexSharpSDK.csproj" />
+    <ProjectReference Include="..\CodexSharpSDK.Extensions.AI\CodexSharpSDK.Extensions.AI.csproj" />
+    <ProjectReference Include="..\CodexSharpSDK\CodexSharpSDK.csproj" />
   </ItemGroup>
 </Project>

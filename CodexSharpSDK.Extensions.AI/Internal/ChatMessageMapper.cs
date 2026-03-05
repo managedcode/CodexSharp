@@ -1,4 +1,3 @@
-using System.Text;
 using ManagedCode.CodexSharpSDK.Models;
 using Microsoft.Extensions.AI;
 
@@ -6,10 +5,14 @@ namespace ManagedCode.CodexSharpSDK.Extensions.AI.Internal;
 
 internal static class ChatMessageMapper
 {
+    private const string SystemPrefix = "[System] ";
+    private const string AssistantPrefix = "[Assistant] ";
+    private const string ParagraphSeparator = "\n\n";
+    private const string ImageMediaPrefix = "image/";
+
     internal static (string Prompt, List<DataContent> ImageContents) ToCodexInput(IEnumerable<ChatMessage> messages)
     {
-        var prompt = new StringBuilder();
-        var userTextParts = new List<string>();
+        var promptParts = new List<string>();
         var imageContents = new List<DataContent>();
 
         foreach (var message in messages)
@@ -18,38 +21,42 @@ internal static class ChatMessageMapper
             {
                 if (message.Text is { } systemText)
                 {
-                    prompt.Append("[System] ").Append(systemText).Append("\n\n");
+                    promptParts.Add(string.Concat(SystemPrefix, systemText));
                 }
+
+                continue;
             }
-            else if (message.Role == ChatRole.User)
+
+            if (message.Role == ChatRole.User)
             {
+                var userTextParts = new List<string>();
                 foreach (var content in message.Contents)
                 {
-                    if (content is TextContent tc && tc.Text is not null)
+                    if (content is TextContent textContent && textContent.Text is { } text)
                     {
-                        userTextParts.Add(tc.Text);
+                        userTextParts.Add(text);
                     }
-                    else if (content is DataContent dc && dc.MediaType is not null && dc.MediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                    else if (content is DataContent dataContent && IsImageMediaType(dataContent.MediaType))
                     {
-                        imageContents.Add(dc);
+                        imageContents.Add(dataContent);
                     }
                 }
-            }
-            else if (message.Role == ChatRole.Assistant)
-            {
-                if (message.Text is { } assistantText)
+
+                if (userTextParts.Count > 0)
                 {
-                    prompt.Append("[Assistant] ").Append(assistantText).Append("\n\n");
+                    promptParts.Add(string.Join(ParagraphSeparator, userTextParts));
                 }
+
+                continue;
+            }
+
+            if (message.Role == ChatRole.Assistant && message.Text is { } assistantText)
+            {
+                promptParts.Add(string.Concat(AssistantPrefix, assistantText));
             }
         }
 
-        if (userTextParts.Count > 0)
-        {
-            prompt.Append(string.Join("\n\n", userTextParts));
-        }
-
-        return (prompt.ToString(), imageContents);
+        return (string.Join(ParagraphSeparator, promptParts), imageContents);
     }
 
     internal static IReadOnlyList<UserInput> BuildUserInput(string prompt, IReadOnlyList<DataContent> imageContents)
@@ -73,6 +80,9 @@ internal static class ChatMessageMapper
 
         return inputs;
     }
+
+    private static bool IsImageMediaType(string? mediaType) =>
+        mediaType is not null && mediaType.StartsWith(ImageMediaPrefix, StringComparison.OrdinalIgnoreCase);
 
     private static string GenerateFileName(string? mediaType)
     {

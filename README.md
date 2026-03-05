@@ -306,6 +306,42 @@ app.MapGet("/ask", async (IChatClient client) =>
 });
 ```
 
+### Resolve `IChatClient` from `IServiceProvider`
+
+```csharp
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using ManagedCode.CodexSharpSDK.Models;
+using ManagedCode.CodexSharpSDK.Extensions.AI.Extensions;
+
+var services = new ServiceCollection();
+services.AddCodexChatClient(options =>
+{
+    options.DefaultModel = CodexModels.Gpt53Codex;
+});
+
+using var provider = services.BuildServiceProvider();
+var chatClient = provider.GetRequiredService<IChatClient>();
+```
+
+Keyed registration is also supported:
+
+```csharp
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using ManagedCode.CodexSharpSDK.Models;
+using ManagedCode.CodexSharpSDK.Extensions.AI.Extensions;
+
+var services = new ServiceCollection();
+services.AddKeyedCodexChatClient("codex-main", options =>
+{
+    options.DefaultModel = CodexModels.Gpt53Codex;
+});
+
+using var provider = services.BuildServiceProvider();
+var keyedChatClient = provider.GetRequiredKeyedService<IChatClient>("codex-main");
+```
+
 ### Streaming
 
 ```csharp

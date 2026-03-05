@@ -33,6 +33,8 @@ Keep package quality and upstream Codex CLI parity automatically verified throug
 ## Business Rules
 
 - CI must run build and tests on every push/PR.
+- CI and Release workflows must execute full solution tests (`dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release`) before smoke subsets.
+- Codex CLI smoke test workflow steps must run `CodexCli_Smoke_*` via `CodexSharpSDK.Tests` project scope to avoid false `zero tests ran` failures in non-smoke test assemblies.
 - Release workflow must build/test before pack/publish.
 - Release workflow must read package version from `Directory.Build.props`.
 - Release workflow must validate semantic version format before packaging.

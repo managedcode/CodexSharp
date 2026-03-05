@@ -20,6 +20,13 @@ git submodule update --init --recursive
 dotnet restore ManagedCode.CodexSharpSDK.slnx
 ```
 
+## Solution projects
+
+- `CodexSharpSDK/CodexSharpSDK.csproj` — core `ManagedCode.CodexSharpSDK` package.
+- `CodexSharpSDK.Extensions.AI/CodexSharpSDK.Extensions.AI.csproj` — optional `IChatClient` adapter package (`ManagedCode.CodexSharpSDK.Extensions.AI`).
+- `CodexSharpSDK.Tests/CodexSharpSDK.Tests.csproj` — core SDK tests (TUnit).
+- `CodexSharpSDK.Extensions.AI.Tests/CodexSharpSDK.Extensions.AI.Tests.csproj` — M.E.AI adapter tests (TUnit).
+
 ## Local validation
 
 ```bash

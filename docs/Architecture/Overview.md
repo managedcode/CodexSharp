@@ -7,8 +7,8 @@ Single source of truth: this file is navigational and coarse. Detailed behavior 
 ## Summary
 
 - **System:** .NET SDK wrapper over Codex CLI JSONL protocol.
-- **Where is the code:** `CodexSharpSDK`, tests in `CodexSharpSDK.Tests`.
-- **Entry points:** `CodexClient`.
+- **Where is the code:** core SDK in `CodexSharpSDK`; optional M.E.AI adapter in `CodexSharpSDK.Extensions.AI`; tests in `CodexSharpSDK.Tests` and `CodexSharpSDK.Extensions.AI.Tests`.
+- **Entry points:** `CodexClient`, `CodexChatClient` (`IChatClient` adapter).
 - **Dependencies:** local `codex` CLI process, `System.Text.Json`, .NET SDK/toolchain, GitHub Actions.
 
 ## Scoping (read first)

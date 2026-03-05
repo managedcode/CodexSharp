@@ -61,8 +61,11 @@ jobs:
     - name: Build
       run: dotnet build ManagedCode.CodexSharpSDK.slnx --configuration Release --warnaserror --no-restore
 
+    - name: Test (full solution)
+      run: dotnet test --solution ManagedCode.CodexSharpSDK.slnx --configuration Release --no-build
+
     - name: Codex CLI smoke tests
-      run: dotnet test --solution ManagedCode.CodexSharpSDK.slnx --configuration Release --no-build -- --treenode-filter "/*/*/*/CodexCli_Smoke_*"
+      run: dotnet test --project CodexSharpSDK.Tests/CodexSharpSDK.Tests.csproj --configuration Release --no-build -- --treenode-filter "/*/*/*/CodexCli_Smoke_*"
 
     - name: Pack NuGet package
       run: dotnet pack CodexSharpSDK/CodexSharpSDK.csproj --configuration Release --no-build -p:IncludeSymbols=false -p:SymbolPackageFormat=snupkg --output ./artifacts

@@ -27,6 +27,9 @@ Verify `ManagedCode.CodexSharpSDK` behavior against real Codex CLI contracts, wi
 - build: `dotnet build ManagedCode.CodexSharpSDK.slnx -c Release -warnaserror`
 - test: `dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release`
 - coverage: `dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release -- --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml`
+- codex smoke subset: `dotnet test --project CodexSharpSDK.Tests/CodexSharpSDK.Tests.csproj -c Release -- --treenode-filter "/*/*/*/CodexCli_Smoke_*"`
+
+Smoke subset is an additional gate and does not replace full-solution test execution.
 
 TUnit on Microsoft Testing Platform does not support `--filter`; run focused tests with `-- --treenode-filter "/*/*/<ClassName>/*"`.
 

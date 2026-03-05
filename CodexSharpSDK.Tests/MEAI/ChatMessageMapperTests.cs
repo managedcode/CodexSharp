@@ -43,6 +43,23 @@ public class ChatMessageMapperTests
     }
 
     [Test]
+    public async Task ToCodexInput_MixedRoles_PreservesMessageChronology()
+    {
+        var messages = new[]
+        {
+            new ChatMessage(ChatRole.System, "Be concise"),
+            new ChatMessage(ChatRole.User, "First question"),
+            new ChatMessage(ChatRole.Assistant, "First answer"),
+            new ChatMessage(ChatRole.User, "Follow up"),
+        };
+
+        var (prompt, _) = ChatMessageMapper.ToCodexInput(messages);
+
+        await Assert.That(prompt).IsEqualTo(
+            "[System] Be concise\n\nFirst question\n\n[Assistant] First answer\n\nFollow up");
+    }
+
+    [Test]
     public async Task ToCodexInput_ImageContent_ExtractedSeparately()
     {
         var imageData = new byte[] { 0x89, 0x50, 0x4E, 0x47 }; // PNG header
