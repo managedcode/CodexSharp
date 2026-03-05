@@ -2,6 +2,7 @@ namespace ManagedCode.CodexSharpSDK.Models;
 
 public static class CodexModels
 {
+    public const string Gpt54 = "gpt-5.4";
     public const string Gpt53Codex = "gpt-5.3-codex";
     public const string Gpt53CodexSpark = "gpt-5.3-codex-spark";
     public const string Gpt52Codex = "gpt-5.2-codex";

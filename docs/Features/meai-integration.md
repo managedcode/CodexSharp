@@ -98,7 +98,7 @@ using ManagedCode.CodexSharpSDK.Models;
 
 IChatClient client = new CodexChatClient(new CodexChatClientOptions
 {
-    DefaultModel = CodexModels.Gpt53Codex,
+    DefaultModel = CodexModels.Gpt54,
 });
 ```
 
@@ -113,7 +113,7 @@ using ManagedCode.CodexSharpSDK.Models;
 var services = new ServiceCollection();
 services.AddCodexChatClient(options =>
 {
-    options.DefaultModel = CodexModels.Gpt53Codex;
+    options.DefaultModel = CodexModels.Gpt54;
 });
 
 using var provider = services.BuildServiceProvider();
@@ -131,7 +131,7 @@ using ManagedCode.CodexSharpSDK.Models;
 var services = new ServiceCollection();
 services.AddKeyedCodexChatClient("codex-main", options =>
 {
-    options.DefaultModel = CodexModels.Gpt53Codex;
+    options.DefaultModel = CodexModels.Gpt54;
 });
 
 using var provider = services.BuildServiceProvider();

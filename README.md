@@ -46,7 +46,7 @@ using var client = new CodexClient();
 
 var thread = client.StartThread(new ThreadOptions
 {
-    Model = CodexModels.Gpt53Codex,
+    Model = CodexModels.Gpt54,
     ModelReasoningEffort = ModelReasoningEffort.Medium,
 });
 
@@ -72,7 +72,7 @@ using var client = new CodexClient(new CodexClientOptions
 
 var thread = client.StartThread(new ThreadOptions
 {
-    Model = CodexModels.Gpt53Codex,
+    Model = CodexModels.Gpt54,
     ModelReasoningEffort = ModelReasoningEffort.High,
     SandboxMode = SandboxMode.WorkspaceWrite,
 });
@@ -281,7 +281,7 @@ using ManagedCode.CodexSharpSDK.Extensions.AI;
 
 IChatClient client = new CodexChatClient(new CodexChatClientOptions
 {
-    DefaultModel = CodexModels.Gpt53Codex,
+    DefaultModel = CodexModels.Gpt54,
 });
 
 var response = await client.GetResponseAsync("Diagnose failing tests and propose a fix");
@@ -295,7 +295,7 @@ using ManagedCode.CodexSharpSDK.Extensions.AI.Extensions;
 
 builder.Services.AddCodexChatClient(options =>
 {
-    options.DefaultModel = CodexModels.Gpt53Codex;
+    options.DefaultModel = CodexModels.Gpt54;
 });
 
 // Then inject IChatClient anywhere:
@@ -317,7 +317,7 @@ using ManagedCode.CodexSharpSDK.Extensions.AI.Extensions;
 var services = new ServiceCollection();
 services.AddCodexChatClient(options =>
 {
-    options.DefaultModel = CodexModels.Gpt53Codex;
+    options.DefaultModel = CodexModels.Gpt54;
 });
 
 using var provider = services.BuildServiceProvider();
@@ -335,7 +335,7 @@ using ManagedCode.CodexSharpSDK.Extensions.AI.Extensions;
 var services = new ServiceCollection();
 services.AddKeyedCodexChatClient("codex-main", options =>
 {
-    options.DefaultModel = CodexModels.Gpt53Codex;
+    options.DefaultModel = CodexModels.Gpt54;
 });
 
 using var provider = services.BuildServiceProvider();
@@ -356,7 +356,7 @@ await foreach (var update in client.GetStreamingResponseAsync("Implement the fix
 ```csharp
 var options = new ChatOptions
 {
-    ModelId = CodexModels.Gpt53Codex,
+    ModelId = CodexModels.Gpt54,
     AdditionalProperties = new AdditionalPropertiesDictionary
     {
         ["codex:sandbox_mode"] = "workspace-write",
