@@ -6,6 +6,13 @@
 - Codex CLI available locally (`codex` in PATH) for real runtime usage
 - Git with submodule support
 
+## Windows Codex process lookup
+
+- Runtime lookup order:
+  - npm-installed native vendor binary under `node_modules/@openai/*/vendor/<target>/codex/codex.exe`
+  - PATH candidates in order: `codex.exe`, `codex.cmd`, `codex.bat`, `codex`
+- This allows both native npm optional packages and global npm shim installs to work on Windows.
+
 ## Bootstrap
 
 ```bash

@@ -45,7 +45,7 @@ jobs:
         run: dotnet restore ManagedCode.CodexSharpSDK.slnx
 
       - name: Run real integration tests
-        run: dotnet test --project tests/CodexSharpSDK.Tests.csproj -c Release -- --treenode-filter "/*/*/RealCodexIntegrationTests/*"
+        run: dotnet test --project CodexSharpSDK.Tests/CodexSharpSDK.Tests.csproj -c Release -- --treenode-filter "/*/*/*/RunAsync_WithRealCodexCli_*"
         env:
           CODEX_REAL_INTEGRATION: "1"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

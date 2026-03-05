@@ -1,6 +1,6 @@
 using ManagedCode.CodexSharpSDK.Internal;
 
-namespace ManagedCode.CodexSharpSDK;
+namespace ManagedCode.CodexSharpSDK.Models;
 
 public sealed record Usage(int InputTokens, int CachedInputTokens, int OutputTokens);
 

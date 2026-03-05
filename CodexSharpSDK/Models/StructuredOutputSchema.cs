@@ -1,6 +1,7 @@
+using System.Linq.Expressions;
 using System.Text.Json.Nodes;
 
-namespace ManagedCode.CodexSharpSDK;
+namespace ManagedCode.CodexSharpSDK.Models;
 
 public enum StructuredOutputSchemaType
 {
@@ -93,6 +94,32 @@ public sealed record StructuredOutputSchema
         };
     }
 
+    public static StructuredOutputSchema Map<TModel>(
+        bool? additionalProperties = null,
+        params (Expression<Func<TModel, object?>> Property, StructuredOutputSchema Schema)[] properties)
+    {
+        ArgumentNullException.ThrowIfNull(properties);
+        if (properties.Length == 0)
+        {
+            throw new ArgumentException("At least one property mapping is required.", nameof(properties));
+        }
+
+        var mappedProperties = new Dictionary<string, StructuredOutputSchema>(StringComparer.Ordinal);
+        var requiredProperties = new List<string>(properties.Length);
+
+        foreach (var (propertyExpression, schema) in properties)
+        {
+            ArgumentNullException.ThrowIfNull(propertyExpression);
+            ArgumentNullException.ThrowIfNull(schema);
+
+            var propertyName = ResolvePropertyName(propertyExpression.Body);
+            mappedProperties[propertyName] = schema;
+            requiredProperties.Add(propertyName);
+        }
+
+        return Map(mappedProperties, requiredProperties, additionalProperties);
+    }
+
     internal JsonObject ToJsonObject()
     {
         return Type switch
@@ -152,7 +179,7 @@ public sealed record StructuredOutputSchema
             var required = new JsonArray();
             foreach (var requiredProperty in Required)
             {
-                required.Add((JsonNode?)JsonValue.Create(requiredProperty));
+                required.Add(CreateStringJsonNode(requiredProperty));
             }
 
             result[JsonTypeTokens.Required] = required;
@@ -164,6 +191,31 @@ public sealed record StructuredOutputSchema
         }
 
         return result;
+    }
+
+    private static string ResolvePropertyName(Expression expression)
+    {
+        if (expression is UnaryExpression unaryExpression && unaryExpression.NodeType == ExpressionType.Convert)
+        {
+            expression = unaryExpression.Operand;
+        }
+
+        if (expression is MemberExpression memberExpression && memberExpression.Member.MemberType == System.Reflection.MemberTypes.Property)
+        {
+            return memberExpression.Member.Name;
+        }
+
+        throw new ArgumentException("Property selector must point to a model property.");
+    }
+
+    private static JsonNode CreateStringJsonNode(string value)
+    {
+        var escapedValue = value
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal);
+
+        return JsonNode.Parse($"\"{escapedValue}\"")
+               ?? throw new InvalidOperationException("Failed to create JSON node for required property.");
     }
 
     private static class JsonTypeTokens

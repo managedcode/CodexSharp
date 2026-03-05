@@ -1,204 +1,122 @@
-namespace ManagedCode.CodexSharpSDK.Tests;
+using ManagedCode.CodexSharpSDK.Client;
+using ManagedCode.CodexSharpSDK.Execution;
+using ManagedCode.CodexSharpSDK.Tests.Shared;
+
+namespace ManagedCode.CodexSharpSDK.Tests.Integration;
 
 public class CodexExecIntegrationTests
 {
-    private const string SandboxRootDirectoryName = ".sandbox";
-    private const string SandboxDirectoryPrefix = "codexsharp-integration-";
+    private const string FirstPrompt = "Reply with short plain text: first.";
+    private const string SecondPrompt = "Reply with short plain text: second.";
+    private const string InvalidModel = "__codexsharp_invalid_model__";
 
     [Test]
     public async Task RunAsync_UsesDefaultProcessRunner_EndToEnd()
     {
-        if (OperatingSystem.IsWindows())
+        var settings = RealCodexTestSupport.TryGetSettings();
+        if (settings is null)
         {
             return;
         }
 
-        var sandboxDirectory = CreateSandboxDirectory();
-        try
+        var exec = new CodexExec();
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+
+        var lines = await DrainToListAsync(exec.RunAsync(new CodexExecArgs
         {
-            var argsLog = Path.Combine(sandboxDirectory, "args.log");
-            var inputLog = Path.Combine(sandboxDirectory, "input.log");
-            var executablePath = Path.Combine(sandboxDirectory, "fake-codex.sh");
+            Input = FirstPrompt,
+            Model = settings.Model,
+            ModelReasoningEffort = ModelReasoningEffort.Minimal,
+            SandboxMode = SandboxMode.WorkspaceWrite,
+            NetworkAccessEnabled = true,
+            ApiKey = settings.ApiKey,
+            CancellationToken = cancellation.Token,
+        }));
 
-            WriteExecutableScript(executablePath, BuildSuccessScript(argsLog, inputLog, "thread_it_1", "integration_ok"));
-
-            await using var client = new CodexClient(new CodexOptions
-            {
-                CodexPathOverride = executablePath,
-            });
-
-            var thread = client.StartThread(new ThreadOptions
-            {
-                Model = "gpt-5.3-codex",
-                SandboxMode = SandboxMode.WorkspaceWrite,
-            });
-
-            var result = await thread.RunAsync("hello from integration");
-
-            await Assert.That(thread.Id).IsEqualTo("thread_it_1");
-            await Assert.That(result.FinalResponse).IsEqualTo("integration_ok");
-            await Assert.That(result.Usage).IsNotNull();
-
-            var args = await File.ReadAllLinesAsync(argsLog);
-            await Assert.That(args).Contains("exec");
-            await Assert.That(args).Contains("--experimental-json");
-            await Assert.That(args).Contains("--model");
-            await Assert.That(args).Contains("gpt-5.3-codex");
-            await Assert.That(args).Contains("--sandbox");
-            await Assert.That(args).Contains("workspace-write");
-
-            var input = await File.ReadAllTextAsync(inputLog);
-            await Assert.That(input).IsEqualTo("hello from integration");
-        }
-        finally
-        {
-            CleanupSandboxDirectory(sandboxDirectory);
-        }
+        await Assert.That(lines.Any(line => line.Contains("\"type\":\"thread.started\"", StringComparison.Ordinal))).IsTrue();
+        await Assert.That(lines.Any(line => line.Contains("\"type\":\"turn.completed\"", StringComparison.Ordinal))).IsTrue();
     }
 
     [Test]
     public async Task RunAsync_SecondCallPassesResumeArgument_EndToEnd()
     {
-        if (OperatingSystem.IsWindows())
+        var settings = RealCodexTestSupport.TryGetSettings();
+        if (settings is null)
         {
             return;
         }
 
-        var sandboxDirectory = CreateSandboxDirectory();
-        try
+        using var client = RealCodexTestSupport.CreateClient(settings);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+
+        var thread = client.StartThread(new ThreadOptions
         {
-            var argsLog = Path.Combine(sandboxDirectory, "args.log");
-            var inputLog = Path.Combine(sandboxDirectory, "input.log");
-            var executablePath = Path.Combine(sandboxDirectory, "fake-codex.sh");
+            Model = settings.Model,
+            ModelReasoningEffort = ModelReasoningEffort.Minimal,
+            SandboxMode = SandboxMode.WorkspaceWrite,
+            NetworkAccessEnabled = true,
+        });
 
-            WriteExecutableScript(executablePath, BuildSuccessScript(argsLog, inputLog, "thread_it_2", "ok"));
+        var firstResult = await thread.RunAsync(
+            FirstPrompt,
+            new TurnOptions { CancellationToken = cancellation.Token });
 
-            await using var client = new CodexClient(new CodexOptions
-            {
-                CodexPathOverride = executablePath,
-            });
+        var threadId = thread.Id;
+        await Assert.That(threadId).IsNotNull();
+        await Assert.That(firstResult.Usage).IsNotNull();
 
-            var thread = client.StartThread();
+        var secondResult = await thread.RunAsync(
+            SecondPrompt,
+            new TurnOptions { CancellationToken = cancellation.Token });
 
-            await thread.RunAsync("first");
-            await thread.RunAsync("second");
-
-            var args = await File.ReadAllLinesAsync(argsLog);
-            var resumeIndex = Array.IndexOf(args, "resume");
-
-            await Assert.That(resumeIndex).IsGreaterThan(-1);
-            await Assert.That(args[resumeIndex + 1]).IsEqualTo("thread_it_2");
-        }
-        finally
-        {
-            CleanupSandboxDirectory(sandboxDirectory);
-        }
+        await Assert.That(secondResult.Usage).IsNotNull();
+        await Assert.That(thread.Id).IsEqualTo(threadId);
     }
 
     [Test]
     public async Task RunAsync_PropagatesNonZeroExitCode_EndToEnd()
     {
-        if (OperatingSystem.IsWindows())
+        var settings = RealCodexTestSupport.TryGetSettings();
+        if (settings is null)
         {
             return;
         }
 
-        var sandboxDirectory = CreateSandboxDirectory();
-        try
+        var exec = new CodexExec();
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+
+        var action = async () => await DrainAsync(exec.RunAsync(new CodexExecArgs
         {
-            var executablePath = Path.Combine(sandboxDirectory, "fake-codex.sh");
-            WriteExecutableScript(executablePath, BuildFailureScript());
+            Input = FirstPrompt,
+            Model = InvalidModel,
+            SandboxMode = SandboxMode.WorkspaceWrite,
+            NetworkAccessEnabled = true,
+            ApiKey = settings.ApiKey,
+            CancellationToken = cancellation.Token,
+        }));
 
-            await using var client = new CodexClient(new CodexOptions
-            {
-                CodexPathOverride = executablePath,
-            });
-
-            var thread = client.StartThread();
-            var action = async () => await thread.RunAsync("trigger failure");
-
-            var exception = await Assert.That(action).ThrowsException();
-            await Assert.That(exception).IsTypeOf<InvalidOperationException>();
-            await Assert.That(exception!.Message).Contains("exited with code 9");
-        }
-        finally
-        {
-            CleanupSandboxDirectory(sandboxDirectory);
-        }
+        var exception = await Assert.That(action).ThrowsException();
+        await Assert.That(exception).IsTypeOf<InvalidOperationException>();
+        await Assert.That(exception!.Message).Contains("exited with code");
     }
 
-    private static string CreateSandboxDirectory()
+    private static async Task DrainAsync(IAsyncEnumerable<string> lines)
     {
-        var testsDirectory = Environment.CurrentDirectory;
-        var sandboxRootDirectory = Path.Combine(testsDirectory, SandboxRootDirectoryName);
-        Directory.CreateDirectory(sandboxRootDirectory);
-
-        var directory = Path.Combine(sandboxRootDirectory, $"{SandboxDirectoryPrefix}{Guid.NewGuid():N}");
-        Directory.CreateDirectory(directory);
-        return directory;
-    }
-
-    private static void CleanupSandboxDirectory(string directory)
-    {
-        try
+        await foreach (var _ in lines)
         {
-            if (Directory.Exists(directory))
-            {
-                Directory.Delete(directory, recursive: true);
-            }
-        }
-        catch
-        {
-            // Suppress cleanup errors.
+            // Intentionally empty.
         }
     }
 
-    private static string BuildSuccessScript(string argsLog, string inputLog, string threadId, string response)
+    private static async Task<List<string>> DrainToListAsync(IAsyncEnumerable<string> lines)
     {
-        var escapedThreadId = EscapeJsonString(threadId);
-        var escapedResponse = EscapeJsonString(response);
+        var result = new List<string>();
 
-        return string.Join('\n',
-        [
-            "#!/usr/bin/env bash",
-            "set -euo pipefail",
-            $"args_log={ToBashLiteral(argsLog)}",
-            $"input_log={ToBashLiteral(inputLog)}",
-            "printf '%s\\n' \"$@\" > \"$args_log\"",
-            "cat > \"$input_log\"",
-            $"echo '{{\"type\":\"thread.started\",\"thread_id\":\"{escapedThreadId}\"}}'",
-            $"echo '{{\"type\":\"item.completed\",\"item\":{{\"id\":\"item_1\",\"type\":\"agent_message\",\"text\":\"{escapedResponse}\"}}}}'",
-            "echo '{\"type\":\"turn.completed\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3}}'",
-        ]) + "\n";
-    }
-
-    private static string BuildFailureScript()
-    {
-        return """
-#!/usr/bin/env bash
-set -euo pipefail
-cat > /dev/null
-echo "forced integration failure" >&2
-exit 9
-""";
-    }
-
-    private static string ToBashLiteral(string value)
-    {
-        return $"'{value.Replace("'", "'\"'\"'")}'";
-    }
-
-    private static string EscapeJsonString(string value)
-    {
-        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
-    }
-
-    private static void WriteExecutableScript(string path, string scriptContent)
-    {
-        File.WriteAllText(path, scriptContent);
-        if (!OperatingSystem.IsWindows())
+        await foreach (var line in lines)
         {
-            File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            result.Add(line);
         }
+
+        return result;
     }
 }

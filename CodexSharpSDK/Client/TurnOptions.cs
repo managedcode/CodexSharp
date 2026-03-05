@@ -1,4 +1,6 @@
-namespace ManagedCode.CodexSharpSDK;
+using ManagedCode.CodexSharpSDK.Models;
+
+namespace ManagedCode.CodexSharpSDK.Client;
 
 public sealed record TurnOptions
 {

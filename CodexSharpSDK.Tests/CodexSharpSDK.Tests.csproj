@@ -24,6 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../src/CodexSharpSDK.csproj" />
+    <ProjectReference Include="../CodexSharpSDK/CodexSharpSDK.csproj" />
   </ItemGroup>
 </Project>

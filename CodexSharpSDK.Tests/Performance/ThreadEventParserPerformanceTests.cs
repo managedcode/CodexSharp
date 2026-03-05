@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using ManagedCode.CodexSharpSDK.Internal;
+using ManagedCode.CodexSharpSDK.Models;
 
-namespace ManagedCode.CodexSharpSDK.Tests;
+namespace ManagedCode.CodexSharpSDK.Tests.Performance;
 
 public class ThreadEventParserPerformanceTests
 {

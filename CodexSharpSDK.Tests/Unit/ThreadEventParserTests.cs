@@ -1,6 +1,7 @@
 using ManagedCode.CodexSharpSDK.Internal;
+using ManagedCode.CodexSharpSDK.Models;
 
-namespace ManagedCode.CodexSharpSDK.Tests;
+namespace ManagedCode.CodexSharpSDK.Tests.Unit;
 
 public class ThreadEventParserTests
 {

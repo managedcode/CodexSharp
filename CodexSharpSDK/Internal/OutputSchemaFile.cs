@@ -1,24 +1,33 @@
 using System.Text;
+using ManagedCode.CodexSharpSDK.Logging;
+using ManagedCode.CodexSharpSDK.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ManagedCode.CodexSharpSDK.Internal;
 
 internal sealed class OutputSchemaFile : IAsyncDisposable
 {
     private readonly string? _schemaDirectory;
+    private readonly ILogger _logger;
 
-    private OutputSchemaFile(string? schemaPath, string? schemaDirectory)
+    private OutputSchemaFile(string? schemaPath, string? schemaDirectory, ILogger? logger)
     {
         SchemaPath = schemaPath;
         _schemaDirectory = schemaDirectory;
+        _logger = logger ?? NullLogger.Instance;
     }
 
     public string? SchemaPath { get; }
 
-    public static async Task<OutputSchemaFile> CreateAsync(StructuredOutputSchema? schema, CancellationToken cancellationToken)
+    public static async Task<OutputSchemaFile> CreateAsync(
+        StructuredOutputSchema? schema,
+        ILogger? logger,
+        CancellationToken cancellationToken)
     {
         if (schema is null)
         {
-            return new OutputSchemaFile(null, null);
+            return new OutputSchemaFile(null, null, logger);
         }
 
         var schemaDirectory = Path.Combine(Path.GetTempPath(), $"codex-output-schema-{Guid.NewGuid():N}");
@@ -29,12 +38,12 @@ internal sealed class OutputSchemaFile : IAsyncDisposable
         {
             await File.WriteAllTextAsync(schemaPath, schema.ToJsonObject().ToJsonString(), Encoding.UTF8, cancellationToken)
                 .ConfigureAwait(false);
-            return new OutputSchemaFile(schemaPath, schemaDirectory);
+            return new OutputSchemaFile(schemaPath, schemaDirectory, logger);
         }
-        catch
+        catch (Exception exception)
         {
-            TryDeleteDirectory(schemaDirectory);
-            throw;
+            TryDeleteDirectory(schemaDirectory, logger ?? NullLogger.Instance);
+            throw new InvalidOperationException($"Failed to write output schema file '{schemaPath}'.", exception);
         }
     }
 
@@ -42,21 +51,30 @@ internal sealed class OutputSchemaFile : IAsyncDisposable
     {
         if (_schemaDirectory is not null)
         {
-            TryDeleteDirectory(_schemaDirectory);
+            TryDeleteDirectory(_schemaDirectory, _logger);
         }
 
         return ValueTask.CompletedTask;
     }
 
-    private static void TryDeleteDirectory(string path)
+    private static void TryDeleteDirectory(string path, ILogger logger)
     {
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
         try
         {
             Directory.Delete(path, recursive: true);
         }
-        catch
+        catch (IOException exception)
         {
-            // Suppress cleanup failures.
+            CodexThreadLog.OutputSchemaDeleteFailed(logger, path, exception);
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            CodexThreadLog.OutputSchemaDeleteFailed(logger, path, exception);
         }
     }
 }

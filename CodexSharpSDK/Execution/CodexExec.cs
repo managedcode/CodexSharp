@@ -2,11 +2,12 @@ using System.Collections;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
+using ManagedCode.CodexSharpSDK.Client;
 using ManagedCode.CodexSharpSDK.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace ManagedCode.CodexSharpSDK;
+namespace ManagedCode.CodexSharpSDK.Execution;
 
 public sealed class CodexExec
 {
@@ -57,7 +58,7 @@ public sealed class CodexExec
         CodexProcessInvocation invocation,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        CodexExecLog.Starting(_logger, invocation.ExecutablePath, invocation.Arguments.Count);
+        Logging.CodexExecLog.Starting(_logger, invocation.ExecutablePath, invocation.Arguments.Count);
 
         var lineCount = 0;
 
@@ -65,17 +66,17 @@ public sealed class CodexExec
         try
         {
             enumerator = _processRunner
-                .RunAsync(invocation, cancellationToken)
+                .RunAsync(invocation, _logger, cancellationToken)
                 .GetAsyncEnumerator(cancellationToken);
         }
         catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
         {
-            CodexExecLog.Cancelled(_logger, exception);
+            Logging.CodexExecLog.Cancelled(_logger, exception);
             throw;
         }
         catch (Exception exception)
         {
-            CodexExecLog.Failed(_logger, exception);
+            Logging.CodexExecLog.Failed(_logger, exception);
             throw;
         }
 
@@ -95,12 +96,12 @@ public sealed class CodexExec
                 }
                 catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
                 {
-                    CodexExecLog.Cancelled(_logger, exception);
+                    Logging.CodexExecLog.Cancelled(_logger, exception);
                     throw;
                 }
                 catch (Exception exception)
                 {
-                    CodexExecLog.Failed(_logger, exception);
+                    Logging.CodexExecLog.Failed(_logger, exception);
                     throw;
                 }
 
@@ -108,7 +109,7 @@ public sealed class CodexExec
                 yield return line;
             }
 
-            CodexExecLog.Completed(_logger, lineCount);
+            Logging.CodexExecLog.Completed(_logger, lineCount);
         }
     }
 
@@ -261,13 +262,17 @@ internal sealed record CodexProcessInvocation(
 
 internal interface ICodexProcessRunner
 {
-    IAsyncEnumerable<string> RunAsync(CodexProcessInvocation invocation, CancellationToken cancellationToken);
+    IAsyncEnumerable<string> RunAsync(
+        CodexProcessInvocation invocation,
+        ILogger logger,
+        CancellationToken cancellationToken);
 }
 
 internal sealed class DefaultCodexProcessRunner : ICodexProcessRunner
 {
     public async IAsyncEnumerable<string> RunAsync(
         CodexProcessInvocation invocation,
+        ILogger logger,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var startInfo = new ProcessStartInfo(invocation.ExecutablePath)
@@ -331,11 +336,11 @@ internal sealed class DefaultCodexProcessRunner : ICodexProcessRunner
         }
         finally
         {
-            TryKillProcess(process);
+            TryKillProcess(process, invocation.ExecutablePath, logger);
         }
     }
 
-    private static void TryKillProcess(Process process)
+    private static void TryKillProcess(Process process, string executablePath, ILogger logger)
     {
         try
         {
@@ -344,9 +349,9 @@ internal sealed class DefaultCodexProcessRunner : ICodexProcessRunner
                 process.Kill(entireProcessTree: true);
             }
         }
-        catch
+        catch (Exception exception)
         {
-            // Suppress cleanup errors.
+            Logging.CodexExecLog.ProcessKillFailed(logger, executablePath, exception);
         }
     }
 }

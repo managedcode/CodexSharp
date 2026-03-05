@@ -1,7 +1,11 @@
 using System.Text.Json.Nodes;
+using ManagedCode.CodexSharpSDK.Client;
+using ManagedCode.CodexSharpSDK.Execution;
+using ManagedCode.CodexSharpSDK.Models;
+using ManagedCode.CodexSharpSDK.Tests.Shared;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace ManagedCode.CodexSharpSDK.Tests;
+namespace ManagedCode.CodexSharpSDK.Tests.Unit;
 
 public class CodexExecTests
 {
@@ -28,7 +32,7 @@ public class CodexExecTests
         var args = new CodexExecArgs
         {
             Input = "test prompt",
-            Model = "gpt-5.3-codex",
+            Model = CodexModels.Gpt53Codex,
             SandboxMode = SandboxMode.WorkspaceWrite,
             WorkingDirectory = "/tmp/project",
             AdditionalDirectories = ["/tmp/shared", "/tmp/other"],
@@ -46,7 +50,7 @@ public class CodexExecTests
 
         await Assert.That(commandArgs[0]).IsEqualTo("exec");
         await Assert.That(commandArgs[1]).IsEqualTo("--experimental-json");
-        await Assert.That(ContainsPair(commandArgs, "--model", "gpt-5.3-codex")).IsTrue();
+        await Assert.That(ContainsPair(commandArgs, "--model", CodexModels.Gpt53Codex)).IsTrue();
         await Assert.That(ContainsPair(commandArgs, "--sandbox", "workspace-write")).IsTrue();
         await Assert.That(ContainsPair(commandArgs, "--cd", "/tmp/project")).IsTrue();
         await Assert.That(ContainsPair(commandArgs, "--output-schema", "/tmp/schema.json")).IsTrue();

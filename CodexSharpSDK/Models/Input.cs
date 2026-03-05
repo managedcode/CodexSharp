@@ -1,4 +1,4 @@
-namespace ManagedCode.CodexSharpSDK;
+namespace ManagedCode.CodexSharpSDK.Models;
 
 public abstract record UserInput;
 

@@ -1,4 +1,4 @@
-namespace ManagedCode.CodexSharpSDK;
+namespace ManagedCode.CodexSharpSDK.Client;
 
 public enum ApprovalMode
 {

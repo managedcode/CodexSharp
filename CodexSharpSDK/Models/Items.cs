@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using ManagedCode.CodexSharpSDK.Internal;
 
-namespace ManagedCode.CodexSharpSDK;
+namespace ManagedCode.CodexSharpSDK.Models;
 
 public enum CommandExecutionStatus
 {

@@ -2,7 +2,7 @@
 
 Links:
 Architecture: [docs/Architecture/Overview.md](../Architecture/Overview.md)
-Modules: [CodexThread.cs](../../src/CodexThread.cs), [CodexExec.cs](../../src/CodexExec.cs), [ThreadEventParser.cs](../../src/Internal/ThreadEventParser.cs)
+Modules: [CodexThread.cs](../../CodexSharpSDK/Client/CodexThread.cs), [CodexExec.cs](../../CodexSharpSDK/Execution/CodexExec.cs), [ThreadEventParser.cs](../../CodexSharpSDK/Internal/ThreadEventParser.cs)
 ADRs: [001-codex-cli-wrapper.md](../ADR/001-codex-cli-wrapper.md), [002-protocol-parsing-and-thread-serialization.md](../ADR/002-protocol-parsing-and-thread-serialization.md)
 
 ---
@@ -38,8 +38,10 @@ Provide deterministic thread-based execution over Codex CLI so C# consumers can 
 - Protocol tokens are parsed via constants, not inline literals.
 - Parser must support `collab_tool_call` items emitted by multi-agent operations.
 - Optional `ILogger` (`Microsoft.Extensions.Logging`) receives process lifecycle diagnostics (start/success/failure/cancellation).
-- Structured output uses typed `StructuredOutputSchema` models that are serialized to CLI JSON schema files.
+- Structured output uses typed `StructuredOutputSchema` models (including DTO property selectors) that are serialized to CLI JSON schema files.
 - `LocalImageInput` accepts image path, `FileInfo`, or `Stream`; stream inputs are materialized to temp files and cleaned after run.
+- Codex executable resolution is deterministic: prefer npm-vendored native binary, then PATH lookup; on Windows PATH lookup checks `codex.exe`, `codex.cmd`, `codex.bat`, then `codex`.
+- Cleanup failures are never silently swallowed; process/schema/image cleanup issues are logged through `ILogger`.
 
 ---
 
@@ -92,10 +94,10 @@ flowchart LR
 
 ### Test mapping
 
-- CodexThread behavior: [CodexThreadTests.cs](../../tests/Unit/CodexThreadTests.cs)
-- Protocol parsing: [ThreadEventParserTests.cs](../../tests/Unit/ThreadEventParserTests.cs)
-- CLI argument mapping: [CodexExecTests.cs](../../tests/Unit/CodexExecTests.cs)
-- Client lifecycle: [CodexClientTests.cs](../../tests/Unit/CodexClientTests.cs)
+- CodexThread behavior: [CodexThreadTests.cs](../../CodexSharpSDK.Tests/Unit/CodexThreadTests.cs)
+- Protocol parsing: [ThreadEventParserTests.cs](../../CodexSharpSDK.Tests/Unit/ThreadEventParserTests.cs)
+- CLI argument mapping: [CodexExecTests.cs](../../CodexSharpSDK.Tests/Unit/CodexExecTests.cs)
+- Client lifecycle: [CodexClientTests.cs](../../CodexSharpSDK.Tests/Unit/CodexClientTests.cs)
 
 ---
 

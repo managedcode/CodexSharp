@@ -1,4 +1,4 @@
-namespace ManagedCode.CodexSharpSDK.Tests;
+namespace ManagedCode.CodexSharpSDK.Tests.Shared;
 
 internal static class TestExtensions
 {

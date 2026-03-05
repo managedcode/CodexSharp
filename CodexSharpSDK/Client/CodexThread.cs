@@ -1,8 +1,14 @@
 using System.Runtime.CompilerServices;
+using ManagedCode.CodexSharpSDK.Configuration;
 using ManagedCode.CodexSharpSDK.Exceptions;
+using ManagedCode.CodexSharpSDK.Execution;
 using ManagedCode.CodexSharpSDK.Internal;
+using ManagedCode.CodexSharpSDK.Logging;
+using ManagedCode.CodexSharpSDK.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
-namespace ManagedCode.CodexSharpSDK;
+namespace ManagedCode.CodexSharpSDK.Client;
 
 public sealed class CodexThread
     : IDisposable
@@ -150,11 +156,11 @@ public sealed class CodexThread
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await using var resolvedImages = await ResolvedImages
-            .CreateAsync(normalizedInput.Images, cancellationToken)
+            .CreateAsync(normalizedInput.Images, _options.Logger, cancellationToken)
             .ConfigureAwait(false);
 
         await using var outputSchemaFile = await OutputSchemaFile
-            .CreateAsync(turnOptions.OutputSchema, cancellationToken)
+            .CreateAsync(turnOptions.OutputSchema, _options.Logger, cancellationToken)
             .ConfigureAwait(false);
 
         var execArgs = new CodexExecArgs
@@ -235,15 +241,18 @@ public sealed class CodexThread
 
     private sealed class ResolvedImages : IAsyncDisposable
     {
+        private readonly ILogger _logger;
         private readonly IReadOnlyList<string> _paths;
         private readonly IReadOnlyList<string> _temporaryFiles;
         private readonly IReadOnlyList<Stream> _streamsToDispose;
 
         private ResolvedImages(
+            ILogger? logger,
             IReadOnlyList<string> paths,
             IReadOnlyList<string> temporaryFiles,
             IReadOnlyList<Stream> streamsToDispose)
         {
+            _logger = logger ?? NullLogger.Instance;
             _paths = paths;
             _temporaryFiles = temporaryFiles;
             _streamsToDispose = streamsToDispose;
@@ -253,11 +262,12 @@ public sealed class CodexThread
 
         public static async Task<ResolvedImages> CreateAsync(
             IReadOnlyList<LocalImageInput> images,
+            ILogger? logger,
             CancellationToken cancellationToken)
         {
             if (images.Count == 0)
             {
-                return new ResolvedImages([], [], []);
+                return new ResolvedImages(logger, [], [], []);
             }
 
             var resolvedPaths = new List<string>(images.Count);
@@ -304,7 +314,7 @@ public sealed class CodexThread
                 }
             }
 
-            return new ResolvedImages(resolvedPaths, temporaryFiles, streamsToDispose);
+            return new ResolvedImages(logger, resolvedPaths, temporaryFiles, streamsToDispose);
         }
 
         public async ValueTask DisposeAsync()
@@ -320,11 +330,13 @@ public sealed class CodexThread
                 {
                     File.Delete(tempFile);
                 }
-                catch (IOException)
+                catch (IOException exception)
                 {
+                    CodexThreadLog.TemporaryImageDeleteFailed(_logger, tempFile, exception);
                 }
-                catch (UnauthorizedAccessException)
+                catch (UnauthorizedAccessException exception)
                 {
+                    CodexThreadLog.TemporaryImageDeleteFailed(_logger, tempFile, exception);
                 }
             }
         }

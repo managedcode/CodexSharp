@@ -43,11 +43,11 @@ using ManagedCode.CodexSharpSDK;
 ```csharp
 using ManagedCode.CodexSharpSDK;
 
-await using var client = new CodexClient();
+using var client = new CodexClient();
 
 var thread = client.StartThread(new ThreadOptions
 {
-    Model = "gpt-5.3-codex",
+    Model = CodexModels.Gpt53Codex,
     ModelReasoningEffort = ModelReasoningEffort.Medium,
 });
 
@@ -62,18 +62,18 @@ Console.WriteLine($"Items: {turn.Items.Count}");
 ## Advanced Configuration (Optional)
 
 ```csharp
-await using var client = new CodexClient(new CodexClientOptions
+using var client = new CodexClient(new CodexClientOptions
 {
     CodexOptions = new CodexOptions
     {
         // Override only when `codex` is not discoverable via npm/PATH.
-        CodexPathOverride = "/custom/path/to/codex",
+        CodexExecutablePath = "/custom/path/to/codex",
     },
 });
 
 var thread = client.StartThread(new ThreadOptions
 {
-    Model = "gpt-5.3-codex",
+    Model = CodexModels.Gpt53Codex,
     ModelReasoningEffort = ModelReasoningEffort.High,
     SandboxMode = SandboxMode.WorkspaceWrite,
 });
@@ -84,7 +84,7 @@ var thread = client.StartThread(new ThreadOptions
 - `CodexClient` is safe for concurrent use from multiple threads.
 - `StartAsync()` is idempotent and guarded.
 - `StopAsync()` cleanly disconnects client state.
-- `Dispose()/DisposeAsync()` transition client to `Disposed`.
+- `Dispose()` transitions client to `Disposed`.
 - A single `CodexThread` instance serializes turns (`RunAsync` and `RunStreamedAsync`) to prevent race conditions in shared conversation state.
 
 ## Streaming
@@ -109,18 +109,21 @@ await foreach (var evt in streamed.Events)
 ## Structured Output
 
 ```csharp
-var schema = StructuredOutputSchema.Map(
-    new Dictionary<string, StructuredOutputSchema>
-    {
-        ["summary"] = StructuredOutputSchema.PlainText(),
-        ["status"] = StructuredOutputSchema.PlainText(),
-    },
-    required: ["summary", "status"],
-    additionalProperties: false);
+using System.Text.Json;
+
+public sealed record RepositorySummary(string Summary, string Status);
+
+var schema = StructuredOutputSchema.Map<RepositorySummary>(
+    additionalProperties: false,
+    (response => response.Summary, StructuredOutputSchema.PlainText()),
+    (response => response.Status, StructuredOutputSchema.PlainText()));
 
 var result = await thread.RunAsync(
     "Summarize repository status",
     new TurnOptions { OutputSchema = schema });
+
+var typed = JsonSerializer.Deserialize<RepositorySummary>(result.FinalResponse)
+    ?? throw new InvalidOperationException("Model returned invalid structured output.");
 ```
 
 ## Diagnostics Logging (Optional)
@@ -162,7 +165,7 @@ public sealed class ConsoleCodexLogger : ILogger
     }
 }
 
-await using var client = new CodexClient(new CodexOptions
+using var client = new CodexClient(new CodexOptions
 {
     Logger = new ConsoleCodexLogger(),
 });

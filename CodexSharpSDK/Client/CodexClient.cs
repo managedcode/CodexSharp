@@ -1,6 +1,9 @@
-namespace ManagedCode.CodexSharpSDK;
+using ManagedCode.CodexSharpSDK.Configuration;
+using ManagedCode.CodexSharpSDK.Execution;
 
-public sealed class CodexClient : IDisposable, IAsyncDisposable
+namespace ManagedCode.CodexSharpSDK.Client;
+
+public sealed class CodexClient : IDisposable
 {
     private readonly CodexOptions _options;
     private readonly bool _autoStart;
@@ -54,23 +57,14 @@ public sealed class CodexClient : IDisposable, IAsyncDisposable
         return new CodexThread(exec, _options, options ?? new ThreadOptions(), id);
     }
 
-    public void Dispose()
-    {
-        DisposeAsync().AsTask().GetAwaiter().GetResult();
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        _connectionState.Dispose();
-        return ValueTask.CompletedTask;
-    }
+    public void Dispose() => _connectionState.Dispose();
 
     private CodexExec GetOrCreateExec() => _connectionState.GetOrCreate(_autoStart, CreateExec);
 
     private CodexExec CreateExec()
     {
         return new CodexExec(
-            _options.CodexPathOverride,
+            _options.CodexExecutablePath,
             _options.EnvironmentVariables,
             _options.Config,
             _options.Logger);

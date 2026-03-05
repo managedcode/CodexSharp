@@ -1,6 +1,10 @@
-using System.Text.Json.Nodes;
+using ManagedCode.CodexSharpSDK.Client;
+using ManagedCode.CodexSharpSDK.Configuration;
+using ManagedCode.CodexSharpSDK.Execution;
+using ManagedCode.CodexSharpSDK.Models;
+using ManagedCode.CodexSharpSDK.Tests.Shared;
 
-namespace ManagedCode.CodexSharpSDK.Tests;
+namespace ManagedCode.CodexSharpSDK.Tests.Unit;
 
 public class CodexThreadTests
 {
@@ -13,7 +17,7 @@ public class CodexThreadTests
             return;
         }
 
-        await using var client = RealCodexTestSupport.CreateClient(settings);
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 
@@ -35,17 +39,11 @@ public class CodexThreadTests
             return;
         }
 
-        await using var client = RealCodexTestSupport.CreateClient(settings);
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 
-        var schema = StructuredOutputSchema.Map(
-            new Dictionary<string, StructuredOutputSchema>
-            {
-                ["status"] = StructuredOutputSchema.PlainText(),
-            },
-            required: ["status"],
-            additionalProperties: false);
+        var schema = IntegrationOutputSchemas.StatusOnly();
 
         var result = await thread.RunAsync(
         [
@@ -58,9 +56,8 @@ public class CodexThreadTests
             CancellationToken = cancellation.Token,
         });
 
-        var json = JsonNode.Parse(result.FinalResponse)?.AsObject();
-        await Assert.That(json).IsNotNull();
-        await Assert.That(json!["status"]!.GetValue<string>()).IsEqualTo("ok");
+        var response = IntegrationOutputDeserializer.Deserialize<StatusResponse>(result.FinalResponse);
+        await Assert.That(response.Status).IsEqualTo("ok");
     }
 
     [Test]
@@ -72,7 +69,7 @@ public class CodexThreadTests
             return;
         }
 
-        await using var client = RealCodexTestSupport.CreateClient(settings);
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(3));
 
@@ -101,7 +98,7 @@ public class CodexThreadTests
             return;
         }
 
-        await using var client = RealCodexTestSupport.CreateClient(settings);
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 
@@ -151,8 +148,8 @@ public class CodexThreadTests
         var thread = new CodexThread(exec, new CodexOptions(), new ThreadOptions());
         thread.Dispose();
 
-        var action = async () => await thread.RunAsync("after-dispose");
-        var exception = await Assert.That(action).ThrowsException();
+        async Task<RunResult> Action() => await thread.RunAsync("after-dispose");
+        var exception = await Assert.That(Action!).ThrowsException();
         await Assert.That(exception).IsTypeOf<ObjectDisposedException>();
     }
 

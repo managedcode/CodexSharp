@@ -1,4 +1,9 @@
-namespace ManagedCode.CodexSharpSDK.Tests;
+using ManagedCode.CodexSharpSDK.Client;
+using ManagedCode.CodexSharpSDK.Configuration;
+using ManagedCode.CodexSharpSDK.Models;
+using ManagedCode.CodexSharpSDK.Tests.Shared;
+
+namespace ManagedCode.CodexSharpSDK.Tests.Unit;
 
 public class CodexClientTests
 {
@@ -9,7 +14,7 @@ public class CodexClientTests
         {
             CodexOptions = new CodexOptions
             {
-                CodexPathOverride = "codex",
+                CodexExecutablePath = "codex",
             },
             AutoStart = false,
         });
@@ -29,7 +34,7 @@ public class CodexClientTests
         {
             CodexOptions = new CodexOptions
             {
-                CodexPathOverride = "codex",
+                CodexExecutablePath = "codex",
             },
             AutoStart = false,
         });
@@ -52,7 +57,7 @@ public class CodexClientTests
         {
             CodexOptions = new CodexOptions
             {
-                CodexPathOverride = "codex",
+                CodexExecutablePath = "codex",
             },
             AutoStart = false,
         });
@@ -74,7 +79,7 @@ public class CodexClientTests
         {
             CodexOptions = new CodexOptions
             {
-                CodexPathOverride = "codex",
+                CodexExecutablePath = "codex",
             },
             AutoStart = false,
         });
@@ -92,7 +97,7 @@ public class CodexClientTests
         {
             CodexOptions = new CodexOptions
             {
-                CodexPathOverride = "codex",
+                CodexExecutablePath = "codex",
             },
         });
 
@@ -105,11 +110,11 @@ public class CodexClientTests
     [Test]
     public async Task StartThread_ParameterlessClientUsesDefaultAutoStart()
     {
-        await using var client = new CodexClient();
+        using var client = new CodexClient();
 
         var thread = client.StartThread(new ThreadOptions
         {
-            Model = "gpt-5.3-codex",
+            Model = CodexModels.Gpt53Codex,
             ModelReasoningEffort = ModelReasoningEffort.Medium,
         });
 
@@ -124,7 +129,7 @@ public class CodexClientTests
         {
             CodexOptions = new CodexOptions
             {
-                CodexPathOverride = "codex",
+                CodexExecutablePath = "codex",
             },
         });
 
@@ -139,7 +144,7 @@ public class CodexClientTests
         {
             CodexOptions = new CodexOptions
             {
-                CodexPathOverride = "codex",
+                CodexExecutablePath = "codex",
             },
         });
 
@@ -154,7 +159,7 @@ public class CodexClientTests
         {
             CodexOptions = new CodexOptions
             {
-                CodexPathOverride = "codex",
+                CodexExecutablePath = "codex",
             },
             AutoStart = false,
         });
@@ -171,7 +176,7 @@ public class CodexClientTests
         {
             CodexOptions = new CodexOptions
             {
-                CodexPathOverride = "codex",
+                CodexExecutablePath = "codex",
             },
             AutoStart = false,
         });
@@ -183,18 +188,18 @@ public class CodexClientTests
     }
 
     [Test]
-    public async Task DisposeAsync_SetsDisposedStateAndBlocksOperations()
+    public async Task Dispose_SetsDisposedStateAndBlocksOperations()
     {
         var client = new CodexClient(new CodexClientOptions
         {
             CodexOptions = new CodexOptions
             {
-                CodexPathOverride = "codex",
+                CodexExecutablePath = "codex",
             },
             AutoStart = false,
         });
 
-        await client.DisposeAsync();
+        client.Dispose();
 
         await Assert.That(client.State).IsEqualTo(CodexClientState.Disposed);
 
@@ -204,19 +209,19 @@ public class CodexClientTests
     }
 
     [Test]
-    public async Task DisposeAsync_CanBeCalledConcurrently()
+    public async Task Dispose_CanBeCalledConcurrently()
     {
         var client = new CodexClient(new CodexClientOptions
         {
             CodexOptions = new CodexOptions
             {
-                CodexPathOverride = "codex",
+                CodexExecutablePath = "codex",
             },
             AutoStart = false,
         });
 
         var disposals = Enumerable.Range(0, 64)
-            .Select(_ => client.DisposeAsync().AsTask())
+            .Select(_ => Task.Run(() => client.Dispose()))
             .ToArray();
 
         await Task.WhenAll(disposals);
@@ -232,7 +237,7 @@ public class CodexClientTests
             return;
         }
 
-        await using var client = RealCodexTestSupport.CreateClient(settings);
+        using var client = RealCodexTestSupport.CreateClient(settings);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(3));
 
         var startedThread = client.StartThread(new ThreadOptions

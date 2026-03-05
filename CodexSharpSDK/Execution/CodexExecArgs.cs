@@ -1,4 +1,6 @@
-namespace ManagedCode.CodexSharpSDK;
+using ManagedCode.CodexSharpSDK.Client;
+
+namespace ManagedCode.CodexSharpSDK.Execution;
 
 public sealed record CodexExecArgs
 {

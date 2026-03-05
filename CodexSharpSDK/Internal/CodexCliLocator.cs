@@ -4,6 +4,22 @@ namespace ManagedCode.CodexSharpSDK.Internal;
 
 internal static class CodexCliLocator
 {
+    internal const string CodexExecutableName = "codex";
+    internal const string CodexWindowsExecutableName = "codex.exe";
+
+    private static readonly string[] WindowsPathExecutableCandidates =
+    [
+        CodexWindowsExecutableName,
+        $"{CodexExecutableName}.cmd",
+        $"{CodexExecutableName}.bat",
+        CodexExecutableName,
+    ];
+
+    private static readonly string[] UnixPathExecutableCandidates =
+    [
+        CodexExecutableName,
+    ];
+
     private static readonly Dictionary<string, string> PlatformPackageByTarget =
         new(StringComparer.Ordinal)
         {
@@ -27,7 +43,47 @@ internal static class CodexCliLocator
             return resolvedPath;
         }
 
-        return "codex";
+        if (TryResolvePathExecutable(Environment.GetEnvironmentVariable("PATH"), OperatingSystem.IsWindows(), out var pathExecutable))
+        {
+            return pathExecutable;
+        }
+
+        return OperatingSystem.IsWindows()
+            ? CodexWindowsExecutableName
+            : CodexExecutableName;
+    }
+
+    internal static bool TryResolvePathExecutable(string? pathVariable, bool isWindows, out string executablePath)
+    {
+        executablePath = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(pathVariable))
+        {
+            return false;
+        }
+
+        var candidateNames = GetPathExecutableCandidates(isWindows);
+        foreach (var pathEntry in SplitPathVariable(pathVariable))
+        {
+            foreach (var candidateName in candidateNames)
+            {
+                var candidatePath = Path.Combine(pathEntry, candidateName);
+                if (File.Exists(candidatePath))
+                {
+                    executablePath = candidatePath;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    internal static IReadOnlyList<string> GetPathExecutableCandidates(bool isWindows)
+    {
+        return isWindows
+            ? WindowsPathExecutableCandidates
+            : UnixPathExecutableCandidates;
     }
 
     private static bool TryResolveNpmInstalledBinary(out string binaryPath)
@@ -93,6 +149,22 @@ internal static class CodexCliLocator
         }
 
         return false;
+    }
+
+    private static IEnumerable<string> SplitPathVariable(string pathVariable)
+    {
+        foreach (var rawPathEntry in pathVariable.Split(
+                     Path.PathSeparator,
+                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var trimmedPathEntry = rawPathEntry.Trim('"');
+            if (string.IsNullOrWhiteSpace(trimmedPathEntry))
+            {
+                continue;
+            }
+
+            yield return trimmedPathEntry;
+        }
     }
 
     private static IEnumerable<string> EnumerateSearchRoots()

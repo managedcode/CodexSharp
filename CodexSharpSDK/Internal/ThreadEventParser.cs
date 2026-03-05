@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using ManagedCode.CodexSharpSDK.Models;
 
 namespace ManagedCode.CodexSharpSDK.Internal;
 

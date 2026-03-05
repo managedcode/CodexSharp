@@ -1,6 +1,8 @@
-using System.Text.Json.Nodes;
+using ManagedCode.CodexSharpSDK.Client;
+using ManagedCode.CodexSharpSDK.Models;
+using ManagedCode.CodexSharpSDK.Tests.Shared;
 
-namespace ManagedCode.CodexSharpSDK.Tests;
+namespace ManagedCode.CodexSharpSDK.Tests.Integration;
 
 public class RealCodexIntegrationTests
 {
@@ -13,17 +15,11 @@ public class RealCodexIntegrationTests
             return;
         }
 
-        await using var client = RealCodexTestSupport.CreateClient(settings);
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
 
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-        var schema = StructuredOutputSchema.Map(
-            new Dictionary<string, StructuredOutputSchema>
-            {
-                ["status"] = StructuredOutputSchema.PlainText(),
-            },
-            required: ["status"],
-            additionalProperties: false);
+        var schema = IntegrationOutputSchemas.StatusOnly();
 
         var result = await thread.RunAsync(
             "Reply with a JSON object where status is exactly \"ok\".",
@@ -33,9 +29,8 @@ public class RealCodexIntegrationTests
                 CancellationToken = cancellation.Token,
             });
 
-        var json = JsonNode.Parse(result.FinalResponse)?.AsObject();
-        await Assert.That(json).IsNotNull();
-        await Assert.That(json!["status"]!.GetValue<string>()).IsEqualTo("ok");
+        var response = IntegrationOutputDeserializer.Deserialize<StatusResponse>(result.FinalResponse);
+        await Assert.That(response.Status).IsEqualTo("ok");
         await Assert.That(result.Usage).IsNotNull();
     }
 
@@ -48,7 +43,7 @@ public class RealCodexIntegrationTests
             return;
         }
 
-        await using var client = RealCodexTestSupport.CreateClient(settings);
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 
@@ -82,17 +77,11 @@ public class RealCodexIntegrationTests
             return;
         }
 
-        await using var client = RealCodexTestSupport.CreateClient(settings);
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(3));
 
-        var schema = StructuredOutputSchema.Map(
-            new Dictionary<string, StructuredOutputSchema>
-            {
-                ["status"] = StructuredOutputSchema.PlainText(),
-            },
-            required: ["status"],
-            additionalProperties: false);
+        var schema = IntegrationOutputSchemas.StatusOnly();
 
         var first = await thread.RunAsync(
             "Reply with a JSON object where status is exactly \"ok\".",
@@ -114,9 +103,8 @@ public class RealCodexIntegrationTests
                 CancellationToken = cancellation.Token,
             });
 
-        var secondJson = JsonNode.Parse(second.FinalResponse)?.AsObject();
-        await Assert.That(secondJson).IsNotNull();
-        await Assert.That(secondJson!["status"]!.GetValue<string>()).IsEqualTo("ok");
+        var secondResponse = IntegrationOutputDeserializer.Deserialize<StatusResponse>(second.FinalResponse);
+        await Assert.That(secondResponse.Status).IsEqualTo("ok");
         await Assert.That(second.Usage).IsNotNull();
         await Assert.That(thread.Id).IsEqualTo(firstThreadId);
     }

@@ -1,11 +1,11 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 
-namespace ManagedCode.CodexSharpSDK;
+namespace ManagedCode.CodexSharpSDK.Configuration;
 
 public sealed record CodexOptions
 {
-    public string? CodexPathOverride { get; init; }
+    public string? CodexExecutablePath { get; init; }
 
     public string? BaseUrl { get; init; }
 

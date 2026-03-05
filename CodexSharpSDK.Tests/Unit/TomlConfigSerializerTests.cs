@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using ManagedCode.CodexSharpSDK.Internal;
 
-namespace ManagedCode.CodexSharpSDK.Tests;
+namespace ManagedCode.CodexSharpSDK.Tests.Unit;
 
 public class TomlConfigSerializerTests
 {

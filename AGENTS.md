@@ -139,6 +139,13 @@ If no new rule is detected -> do not update the file.
 - Always build with `-warnaserror` so warnings fail the build.
 - Prefer idiomatic, readable C# with clear naming and straightforward control flow so code can be understood quickly during review and maintenance.
 - Use synchronization primitives only when there is a proven shared-state invariant; prefer simpler designs over ad-hoc locking for maintainable production code.
+- Keep a clear, domain-oriented folder structure (for example `Models`, `Client`, `Execution`, `Internal`) so project layout remains predictable and easy to navigate.
+- Never use sync-over-async bridges like `.GetAwaiter().GetResult()` in SDK code; keep disposal and lifecycle APIs non-blocking and explicit.
+- Do not implement both `IDisposable` and `IAsyncDisposable` on the same SDK type unless the type truly owns asynchronous resources that require async-only cleanup.
+- Never use `#pragma warning disable`; fix the underlying warning cause instead.
+- Keep short constructor initializers on the same line as the signature (for example `Ctor(...) : base(...)`), not on a separate line.
+- Never use empty/silent `catch` blocks; every caught exception must be either logged with context or rethrown with context.
+- Never add fake fallback calls/mocks in production paths; unsupported runtime cases must fail explicitly with actionable errors.
 - No magic literals: extract constants/enums/config values.
 - Protocol and CLI string tokens are mandatory constants: never inline literals in parsing, mapping, or switch branches.
 - In SDK model records, never inline protocol type literals in constructors (`ThreadItem(..., "...")`, `ThreadEvent("...")`); always reference protocol constants.
@@ -153,8 +160,9 @@ If no new rule is detected -> do not update the file.
 - Use `Microsoft.Extensions.Logging.ILogger` for SDK logging extension points; do not introduce custom logger interfaces or custom log-level enums.
 - In tests, prefer `Microsoft.Extensions.Logging.Abstractions.NullLogger` instead of custom fake logger implementations when log capture is not required.
 - Default to AOT/trimming-safe patterns (explicit JSON handling, avoid reflection-heavy designs).
-- Avoid ambiguous option names like `*Override` for primary settings; prefer explicit names (for example executable path / working directory) and keep compatibility aliases only when necessary.
-- README first examples must be beginner-friendly: avoid advanced/optional knobs (for example `CodexPathOverride`) in the very first snippet.
+- Avoid ambiguous option names like `*Override` for primary settings; prefer explicit names (for example executable path / working directory).
+- For this project, remove legacy/compatibility shims immediately (including `[Obsolete]` bridges and duplicate old properties); keep only the current API surface.
+- README first examples must be beginner-friendly: avoid advanced/optional knobs (for example `CodexExecutablePath`) in the very first snippet.
 - When a README snippet shows model tuning, include `ModelReasoningEffort` together with `Model`.
 - Public examples should build output schemas with typed `StructuredOutputSchema` models and map responses to typed DTOs for readability and maintainability.
 - Do not keep or add `JsonSchema` helper abstractions in SDK API/tests; use typed request/response DTO models instead of schema-builder utilities.
@@ -201,6 +209,13 @@ If no new rule is detected -> do not update the file.
 - Hidden assumptions in CI/release pipelines
 - Unreadable, non-idiomatic C# that looks chaotic and hard to reason about
 - Unjustified `lock`/thread-synchronization complexity that obscures intent and increases maintenance risk
+- Flat, mixed file layouts where model, client, execution, and utility types are interleaved without folder boundaries
+- Blocking sync-over-async patterns (`GetAwaiter().GetResult()`) in production SDK code
+- Legacy compatibility layers in a new project (`Obsolete` bridges, duplicate old option names, migration shims)
+- Suppressing warnings with `#pragma warning disable` instead of fixing root causes
+- Constructor initializer formatting split onto a separate line (`)` then next line `: base(...)`) in simple cases
+- Silent exception swallowing (`catch {}` or catch-without logging/context) that hides cleanup/runtime failures
+- Fake fallback behavior that masks real runtime/CLI integration issues
 - Template placeholders left in production repository docs
 - Raw nested `JsonObject`/`JsonArray` schema literals in user-facing examples.
 - Public sample projects in this repository; prefer tests (including AOT tests) instead.
