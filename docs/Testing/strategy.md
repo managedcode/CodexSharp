@@ -26,7 +26,6 @@ Verify `ManagedCode.CodexSharpSDK` behavior against real Codex CLI contracts, wi
 - build: `dotnet build ManagedCode.CodexSharpSDK.slnx -c Release -warnaserror`
 - test: `dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release`
 - coverage: `dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release -- --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml`
-- aot-smoke: `dotnet publish tests/AotSmoke/ManagedCode.CodexSharpSDK.AotSmoke.csproj -c Release -r osx-arm64 /p:PublishAot=true`
 
 TUnit on Microsoft Testing Platform does not support `--filter`; run focused tests with `-- --treenode-filter "/*/*/<ClassName>/*"`.
 

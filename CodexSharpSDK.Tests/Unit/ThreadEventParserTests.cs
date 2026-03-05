@@ -22,7 +22,7 @@ public class ThreadEventParserTests
 
         var parsed = events.Select(ThreadEventParser.Parse).ToList();
 
-        await Assert.That(parsed).HasCount(8);
+        await Assert.That(parsed).Count().IsEqualTo(8);
         await Assert.That(parsed[0]).IsTypeOf<ThreadStartedEvent>();
         await Assert.That(parsed[1]).IsTypeOf<TurnStartedEvent>();
         await Assert.That(parsed[2]).IsTypeOf<TurnCompletedEvent>();
@@ -55,7 +55,7 @@ public class ThreadEventParserTests
             .Select(itemCompleted => itemCompleted.Item)
             .ToList();
 
-        await Assert.That(parsedItems).HasCount(9);
+        await Assert.That(parsedItems).Count().IsEqualTo(9);
         await Assert.That(parsedItems[0]).IsTypeOf<AgentMessageItem>();
         await Assert.That(parsedItems[1]).IsTypeOf<ReasoningItem>();
         await Assert.That(parsedItems[2]).IsTypeOf<CommandExecutionItem>();

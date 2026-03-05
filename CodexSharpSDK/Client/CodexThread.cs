@@ -87,7 +87,7 @@ public sealed class CodexThread
         ArgumentNullException.ThrowIfNull(input);
         var runOptions = EnsureTypedRunOptions(turnOptions);
         var normalizedInput = new NormalizedInput(input, []);
-        return await RunTypedInternalAsync<TResponse>(normalizedInput, runOptions, jsonTypeInfo: null).ConfigureAwait(false);
+        return await RunTypedInternalWithReflectionAsync<TResponse>(normalizedInput, runOptions).ConfigureAwait(false);
     }
 
     public async Task<RunResult<TResponse>> RunAsync<TResponse>(
@@ -110,7 +110,7 @@ public sealed class CodexThread
         ThrowIfDisposed();
         var runOptions = EnsureTypedRunOptions(turnOptions);
         var normalizedInput = NormalizeInput(input);
-        return await RunTypedInternalAsync<TResponse>(normalizedInput, runOptions, jsonTypeInfo: null).ConfigureAwait(false);
+        return await RunTypedInternalWithReflectionAsync<TResponse>(normalizedInput, runOptions).ConfigureAwait(false);
     }
 
     public async Task<RunResult<TResponse>> RunAsync<TResponse>(
@@ -137,7 +137,7 @@ public sealed class CodexThread
         ArgumentNullException.ThrowIfNull(input);
         var normalizedInput = new NormalizedInput(input, []);
         var runOptions = CreateTypedTurnOptions(outputSchema, cancellationToken);
-        return RunTypedInternalAsync<TResponse>(normalizedInput, runOptions, jsonTypeInfo: null);
+        return RunTypedInternalWithReflectionAsync<TResponse>(normalizedInput, runOptions);
     }
 
     public Task<RunResult<TResponse>> RunAsync<TResponse>(
@@ -164,7 +164,7 @@ public sealed class CodexThread
         ThrowIfDisposed();
         var normalizedInput = NormalizeInput(input);
         var runOptions = CreateTypedTurnOptions(outputSchema, cancellationToken);
-        return RunTypedInternalAsync<TResponse>(normalizedInput, runOptions, jsonTypeInfo: null);
+        return RunTypedInternalWithReflectionAsync<TResponse>(normalizedInput, runOptions);
     }
 
     public Task<RunResult<TResponse>> RunAsync<TResponse>(
@@ -384,7 +384,7 @@ public sealed class CodexThread
     private async Task<RunResult<TResponse>> RunTypedInternalAsync<TResponse>(
         NormalizedInput normalizedInput,
         TurnOptions turnOptions,
-        JsonTypeInfo<TResponse>? jsonTypeInfo)
+        JsonTypeInfo<TResponse> jsonTypeInfo)
     {
         var runResult = await RunInternalAsync(normalizedInput, turnOptions).ConfigureAwait(false);
         var typedResponse = DeserializeTypedResponse(runResult.FinalResponse, jsonTypeInfo);
@@ -396,21 +396,56 @@ public sealed class CodexThread
             typedResponse);
     }
 
+    [RequiresDynamicCode(AotUnsafeTypedRunMessage)]
+    [RequiresUnreferencedCode(AotUnsafeTypedRunMessage)]
+    private async Task<RunResult<TResponse>> RunTypedInternalWithReflectionAsync<TResponse>(
+        NormalizedInput normalizedInput,
+        TurnOptions turnOptions)
+    {
+        var runResult = await RunInternalAsync(normalizedInput, turnOptions).ConfigureAwait(false);
+        var typedResponse = DeserializeTypedResponseWithReflection<TResponse>(runResult.FinalResponse);
+
+        return new RunResult<TResponse>(
+            runResult.Items,
+            runResult.FinalResponse,
+            runResult.Usage,
+            typedResponse);
+    }
+
     private static TResponse DeserializeTypedResponse<TResponse>(
         string payload,
-        JsonTypeInfo<TResponse>? jsonTypeInfo)
+        JsonTypeInfo<TResponse> jsonTypeInfo)
+    {
+        ArgumentNullException.ThrowIfNull(jsonTypeInfo);
+
+        try
+        {
+            var response = JsonSerializer.Deserialize(payload, jsonTypeInfo);
+            return response
+                ?? throw new InvalidOperationException(
+                    $"{EmptyTypedRunResponseMessagePrefix} '{typeof(TResponse).Name}'.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"{TypedRunDeserializeFailedMessagePrefix} '{typeof(TResponse).Name}'.",
+                exception);
+        }
+    }
+
+    [RequiresDynamicCode(AotUnsafeTypedRunMessage)]
+    [RequiresUnreferencedCode(AotUnsafeTypedRunMessage)]
+    private static TResponse DeserializeTypedResponseWithReflection<TResponse>(string payload)
     {
         try
         {
-            var response = jsonTypeInfo is null
-                ? JsonSerializer.Deserialize<TResponse>(payload)
-                : JsonSerializer.Deserialize(payload, jsonTypeInfo);
+            var response = JsonSerializer.Deserialize<TResponse>(payload);
             return response
                 ?? throw new InvalidOperationException(
                     $"{EmptyTypedRunResponseMessagePrefix} '{typeof(TResponse).Name}'.");
         }
         catch (InvalidOperationException exception)
-            when (jsonTypeInfo is null && IsReflectionDisabledSerializationError(exception))
+            when (IsReflectionDisabledSerializationError(exception))
         {
             throw new InvalidOperationException(TypedRunRequiresTypeInfoMessage, exception);
         }

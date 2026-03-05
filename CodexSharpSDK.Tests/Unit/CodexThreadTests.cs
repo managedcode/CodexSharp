@@ -167,7 +167,7 @@ public class CodexThreadTests
             CancellationToken = cancellationSource.Token,
         });
 
-        var exception = await Assert.That(action).ThrowsException();
+        var exception = await Assert.That(action!).ThrowsException();
         await Assert.That(exception).IsTypeOf<OperationCanceledException>();
     }
 
@@ -178,7 +178,7 @@ public class CodexThreadTests
         var thread = new CodexThread(exec, new CodexOptions(), new ThreadOptions());
 
         var action = async () => await thread.RunAsync<StatusResponse>("typed output without schema");
-        var exception = await Assert.That(action).ThrowsException();
+        var exception = await Assert.That(action!).ThrowsException();
 
         await Assert.That(exception).IsTypeOf<InvalidOperationException>();
         await Assert.That(exception!.Message).Contains(nameof(TurnOptions.OutputSchema));
@@ -195,7 +195,7 @@ public class CodexThreadTests
             null!,
             IntegrationOutputJsonContext.Default.StatusResponse);
 
-        var exception = await Assert.That(action).ThrowsException();
+        var exception = await Assert.That(action!).ThrowsException();
         await Assert.That(exception).IsTypeOf<ArgumentNullException>();
         await Assert.That(((ArgumentNullException)exception!).ParamName).IsEqualTo("outputSchema");
     }

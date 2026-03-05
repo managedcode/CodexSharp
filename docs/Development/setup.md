@@ -31,13 +31,7 @@ dotnet format ManagedCode.CodexSharpSDK.slnx
 Focused run (TUnit/MTP):
 
 ```bash
-dotnet test --project tests/CodexSharpSDK.Tests.csproj -c Release -- --treenode-filter "/*/*/ThreadEventParserTests/*"
-```
-
-## AOT smoke check
-
-```bash
-dotnet publish tests/AotSmoke/ManagedCode.CodexSharpSDK.AotSmoke.csproj -c Release -r osx-arm64 /p:PublishAot=true
+dotnet test --project CodexSharpSDK.Tests/CodexSharpSDK.Tests.csproj -c Release -- --treenode-filter "/*/*/ThreadEventParserTests/*"
 ```
 
 ## Packaging check

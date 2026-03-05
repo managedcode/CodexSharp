@@ -45,7 +45,7 @@ public class CodexClientTests
             Enumerable.Range(0, 64)
                 .Select(_ => Task.Run(() => client.StartThread())));
 
-        await Assert.That(createdThreads).HasCount(64);
+        await Assert.That(createdThreads).Count().IsEqualTo(64);
         await Assert.That(createdThreads.All(thread => thread.Id is null)).IsTrue();
         await Assert.That(client.State).IsEqualTo(CodexClientState.Connected);
     }

@@ -258,10 +258,3 @@ await resumed.RunAsync("Continue from previous plan");
 dotnet build ManagedCode.CodexSharpSDK.slnx -c Release -warnaserror
 dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release
 ```
-
-## AOT Smoke Check
-
-```bash
-dotnet publish tests/AotSmoke/ManagedCode.CodexSharpSDK.AotSmoke.csproj \
-  -c Release -r linux-x64 -p:PublishAot=true --self-contained true
-```

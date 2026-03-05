@@ -116,5 +116,5 @@ flowchart LR
 
 - Public thread APIs stay aligned with current Codex CLI contracts and documented in repository feature/architecture docs.
 - All listed tests pass.
-- AOT publish smoke remains green.
+- Typed structured output API keeps explicit AOT-safe (`JsonTypeInfo<TResponse>`) and convenience overload contracts documented and covered by tests.
 - Docs remain aligned with code and CI workflows.

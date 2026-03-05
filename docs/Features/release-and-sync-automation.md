@@ -53,7 +53,7 @@ flowchart LR
   Main["push main"] --> Release["release.yml"]
   Daily["daily cron"] --> Watch["codex-cli-watch.yml"]
   Watch --> Issue["GitHub Issue: Codex CLI sync"]
-  CI --> Quality["build + test + aot smoke"]
+  CI --> Quality["build + test"]
   Release --> NuGet["NuGet publish + GitHub release"]
 ```
 
@@ -65,7 +65,6 @@ flowchart LR
 
 - `dotnet build ManagedCode.CodexSharpSDK.slnx -c Release -warnaserror`
 - `dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release`
-- `dotnet publish tests/AotSmoke/ManagedCode.CodexSharpSDK.AotSmoke.csproj -c Release -r osx-arm64 /p:PublishAot=true`
 
 ### Workflow mapping
 

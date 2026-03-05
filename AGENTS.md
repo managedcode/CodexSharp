@@ -69,7 +69,6 @@ If no new rule is detected -> do not update the file.
 - format: `dotnet format ManagedCode.CodexSharpSDK.slnx`
 - analyze: `dotnet build ManagedCode.CodexSharpSDK.slnx -c Release -warnaserror /p:TreatWarningsAsErrors=true`
 - coverage: `dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release -- --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml`
-- aot-smoke: `dotnet publish tests/AotSmoke/ManagedCode.CodexSharpSDK.AotSmoke.csproj -c Release -r osx-arm64 /p:PublishAot=true`
 - For Codex CLI metadata checks (for example model list/default), always use the installed `codex` CLI directly first; do not use `cargo`/submodule helper binaries unless explicitly requested.
 
 ### Task Delivery (ALL TASKS)
@@ -88,7 +87,7 @@ If no new rule is detected -> do not update the file.
   - `docs/Architecture/Overview.md` when module boundaries or interactions change
 - Implement code and tests together.
 - When asked to fix review findings, close every confirmed finding in the same pass; do not leave partial fixes.
-- Do not keep or add public sample projects; repository focus is SDK + tests (including AOT tests) only.
+- Do not keep or add public sample projects; repository focus is SDK + tests only.
 - Upstream sync automation must track real `openai/codex` CLI changes (flags/models/features), not TypeScript SDK surface diffs, and open actionable repository issues for required SDK follow-up.
 - Automatically opened upstream sync issues must include change summary/checklist and assign Copilot by default.
 - Run verification in this order:
@@ -96,7 +95,7 @@ If no new rule is detected -> do not update the file.
   - full solution tests
   - format
   - final build
-- If changes impact trimming/AOT safety, run `aot-smoke`.
+- If changes impact trimming/AOT safety, validate via AOT-safe API design (for example `JsonTypeInfo<T>` overloads and annotations) and existing test/build gates; do not introduce a dedicated AOT smoke test project unless explicitly requested.
 
 ### Documentation (ALL TASKS)
 

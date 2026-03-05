@@ -157,7 +157,7 @@ public class CodexCliMetadataReaderTests
         using var document = JsonDocument.Parse(json);
         var parsed = CodexCliMetadataReader.ParseModelsCache(document.RootElement);
 
-        await Assert.That(parsed).HasCount(2);
+        await Assert.That(parsed).Count().IsEqualTo(2);
         await Assert.That(parsed[0].Slug).IsEqualTo("gpt-5.3-codex");
         await Assert.That(parsed[0].IsListed).IsTrue();
         await Assert.That(parsed[0].IsApiSupported).IsTrue();

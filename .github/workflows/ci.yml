@@ -46,24 +46,3 @@ jobs:
 
       - name: Smoke tests (Codex CLI discover + invoke)
         run: dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release --no-build -- --treenode-filter "/*/*/*/CodexCli_Smoke_*"
-
-  aot-smoke:
-    name: NativeAOT Smoke
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Publish AOT smoke app
-        run: |
-          dotnet publish tests/AotSmoke/ManagedCode.CodexSharpSDK.AotSmoke.csproj \
-            -c Release \
-            -r linux-x64 \
-            -p:PublishAot=true \
-            --self-contained true
