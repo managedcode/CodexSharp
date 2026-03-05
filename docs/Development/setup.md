@@ -10,27 +10,33 @@
 
 ```bash
 git submodule update --init --recursive
-dotnet restore CodexSharp.slnx
+dotnet restore ManagedCode.CodexSharpSDK.slnx
 ```
 
 ## Local validation
 
 ```bash
-dotnet build CodexSharp.slnx -c Release -warnaserror
-dotnet test --solution CodexSharp.slnx -c Release
-dotnet format CodexSharp.slnx
+dotnet build ManagedCode.CodexSharpSDK.slnx -c Release -warnaserror
+dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release
+dotnet format ManagedCode.CodexSharpSDK.slnx
+```
+
+Focused run (TUnit/MTP):
+
+```bash
+dotnet test --project tests/CodexSharpSDK.Tests.csproj -c Release -- --treenode-filter "/*/*/ThreadEventParserTests/*"
 ```
 
 ## AOT smoke check
 
 ```bash
-dotnet publish samples/CodexSharp.AotSmoke/CodexSharp.AotSmoke.csproj -c Release -r osx-arm64 /p:PublishAot=true
+dotnet publish tests/AotSmoke/ManagedCode.CodexSharpSDK.AotSmoke.csproj -c Release -r osx-arm64 /p:PublishAot=true
 ```
 
 ## Packaging check
 
 ```bash
-dotnet pack src/CodexSharp/CodexSharp.csproj -c Release --no-build -o artifacts
+dotnet pack src/CodexSharpSDK.csproj -c Release --no-build -o artifacts
 ```
 
 ## CI/workflows
@@ -39,3 +45,4 @@ dotnet pack src/CodexSharp/CodexSharp.csproj -c Release --no-build -o artifacts
 - Release: `.github/workflows/release.yml`
 - CodeQL: `.github/workflows/codeql.yml`
 - TypeScript sync watcher: `.github/workflows/typescript-sdk-watch.yml`
+- Real integration matrix: `.github/workflows/real-integration.yml`

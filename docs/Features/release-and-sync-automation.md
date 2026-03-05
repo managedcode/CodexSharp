@@ -21,6 +21,7 @@ Keep package quality and TypeScript parity automatically verified through GitHub
 - release workflow (`release.yml`)
 - CodeQL workflow (`codeql.yml`)
 - upstream watch workflow (`typescript-sdk-watch.yml`)
+- real integration matrix workflow (`real-integration.yml`)
 
 ### Out of scope
 
@@ -33,6 +34,9 @@ Keep package quality and TypeScript parity automatically verified through GitHub
 
 - CI must run build and tests on every push/PR.
 - Release workflow must build/test before pack/publish.
+- Release workflow must read package version from `src/CodexSharpSDK.csproj`.
+- Release workflow must validate semantic version format before packaging.
+- Release workflow must use generated GitHub release notes.
 - TypeScript watch runs daily and opens issue only when `sdk/typescript` changed upstream.
 - Duplicate sync issue for same upstream SHA is not allowed.
 
@@ -56,9 +60,9 @@ flowchart LR
 
 ### Test commands
 
-- `dotnet build CodexSharp.slnx -c Release -warnaserror`
-- `dotnet test --solution CodexSharp.slnx -c Release`
-- `dotnet publish samples/CodexSharp.AotSmoke/CodexSharp.AotSmoke.csproj -c Release -r osx-arm64 /p:PublishAot=true`
+- `dotnet build ManagedCode.CodexSharpSDK.slnx -c Release -warnaserror`
+- `dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release`
+- `dotnet publish tests/AotSmoke/ManagedCode.CodexSharpSDK.AotSmoke.csproj -c Release -r osx-arm64 /p:PublishAot=true`
 
 ### Workflow mapping
 
@@ -66,6 +70,7 @@ flowchart LR
 - Release: [release.yml](../../.github/workflows/release.yml)
 - CodeQL: [codeql.yml](../../.github/workflows/codeql.yml)
 - TS Watch: [typescript-sdk-watch.yml](../../.github/workflows/typescript-sdk-watch.yml)
+- Real integration matrix: [real-integration.yml](../../.github/workflows/real-integration.yml)
 
 ---
 

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Project: ManagedCode.CodexSharp
+Project: ManagedCode.CodexSharpSDK
 Stack: .NET 10, C# 14, TUnit, GitHub Actions, NativeAOT, NuGet, Codex CLI integration
 
 Follows [MCAF](https://mcaf.managed-code.com/)
@@ -64,12 +64,12 @@ If no new rule is detected -> do not update the file.
 
 ### Commands
 
-- build: `dotnet build CodexSharp.slnx -c Release -warnaserror`
-- test: `dotnet test --solution CodexSharp.slnx -c Release`
-- format: `dotnet format CodexSharp.slnx`
-- analyze: `dotnet build CodexSharp.slnx -c Release -warnaserror /p:TreatWarningsAsErrors=true`
-- coverage: `dotnet test --solution CodexSharp.slnx -c Release -- --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml`
-- aot-smoke: `dotnet publish samples/CodexSharp.AotSmoke/CodexSharp.AotSmoke.csproj -c Release -r osx-arm64 /p:PublishAot=true`
+- build: `dotnet build ManagedCode.CodexSharpSDK.slnx -c Release -warnaserror`
+- test: `dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release`
+- format: `dotnet format ManagedCode.CodexSharpSDK.slnx`
+- analyze: `dotnet build ManagedCode.CodexSharpSDK.slnx -c Release -warnaserror /p:TreatWarningsAsErrors=true`
+- coverage: `dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release -- --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml`
+- aot-smoke: `dotnet publish tests/AotSmoke/ManagedCode.CodexSharpSDK.AotSmoke.csproj -c Release -r osx-arm64 /p:PublishAot=true`
 
 ### Task Delivery (ALL TASKS)
 
@@ -86,6 +86,8 @@ If no new rule is detected -> do not update the file.
   - `docs/ADR/*` for design/architecture decisions
   - `docs/Architecture/Overview.md` when module boundaries or interactions change
 - Implement code and tests together.
+- When asked to fix review findings, close every confirmed finding in the same pass; do not leave partial fixes.
+- Do not keep or add public sample projects; repository focus is SDK + tests (including AOT tests) only.
 - Run verification in this order:
   - focused tests for changed behavior
   - full solution tests
@@ -108,11 +110,20 @@ If no new rule is detected -> do not update the file.
 
 ### Testing (ALL TASKS)
 
-- Testing framework is TUnit (`tests/CodexSharp.Tests`).
+- Testing framework is TUnit (`tests`).
+- TUnit/MTP does not support `--filter`; for focused runs use `dotnet test ... -- --treenode-filter "<pattern>"`.
+- Always invoke runner options after `--` (for example `dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release -- --treenode-filter "<pattern>"`); if a focused filter runs zero tests, treat it as an invalid filter and correct it before reporting results.
+- In this repository, method-level `treenode-filter` patterns resolve at depth 3 (`/*/*/*/<TestMethodName>`). For integration subset runs use `dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release -- --treenode-filter "/*/*/*/RunAsync_*_EndToEnd"` (matches current `CodexExecIntegrationTests`).
+- For reliable discovery when selecting focused tests, use the built test app directly: `tests/bin/Release/net10.0/ManagedCode.CodexSharpSDK.Tests --list-tests` (the `dotnet test ... -- --list-tests` wrapper can report zero tests in this setup).
 - Every behavior change must include or update tests.
 - Prefer behavior-level tests over trivial implementation tests.
-- For CLI process interactions, use `FakeCodexProcessRunner` test doubles rather than invoking external binaries.
+- Integration test sandboxes must be created under the repository `tests` tree (for example `tests/.sandbox/*`) for deterministic, inspectable paths; do not use `Path.GetTempPath()` for test sandbox directories.
+- For CLI process interaction tests, use the real installed `codex` CLI (no `FakeCodexProcessRunner` test doubles).
+- Treat `codex` CLI as a test prerequisite: ensure local/CI test setup installs `codex` before running CLI interaction tests; do not replace this with fakes.
+- Real Codex integration tests must work with existing Codex CLI login/session by default; `OPENAI_API_KEY` is optional and must not be a hard requirement.
+- Do not bypass integration tests on Windows with unconditional early returns; keep tests cross-platform for supported Codex CLI environments.
 - Parser changes require tests in `ThreadEventParserTests` for supported and invalid payloads.
+- Parser performance tests must use representative mixed payloads across supported event/item types and assert parsed output shape; avoid single-payload stopwatch loops that do not validate branch coverage.
 - Client/thread concurrency changes require explicit concurrent tests.
 - Never delete/skip tests to get green CI.
 
@@ -126,12 +137,29 @@ If no new rule is detected -> do not update the file.
 
 - Follow `.editorconfig` and analyzer rules.
 - Always build with `-warnaserror` so warnings fail the build.
+- Prefer idiomatic, readable C# with clear naming and straightforward control flow so code can be understood quickly during review and maintenance.
+- Use synchronization primitives only when there is a proven shared-state invariant; prefer simpler designs over ad-hoc locking for maintainable production code.
 - No magic literals: extract constants/enums/config values.
 - Protocol and CLI string tokens are mandatory constants: never inline literals in parsing, mapping, or switch branches.
 - In SDK model records, never inline protocol type literals in constructors (`ThreadItem(..., "...")`, `ThreadEvent("...")`); always reference protocol constants.
 - Do not expose a public SDK type named `Thread`; use `CodexThread` to avoid .NET type-name conflicts.
-- Keep public API and naming aligned with package/namespace `ManagedCode.CodexSharp`.
+- Keep public API and naming aligned with package/namespace `ManagedCode.CodexSharpSDK`.
+- Solution/workspace file naming must use `ManagedCode.CodexSharpSDK` prefix for consistency with package identity.
+- Keep package/version metadata centralized in `Directory.Build.props`; avoid duplicating version structure or release metadata blocks in individual `.csproj` files unless a project-specific override is required.
+- Never hardcode guessed Codex/OpenAI model names in tests, docs, or defaults; verify supported models and active default via Codex CLI first.
+- Before setting or changing any `Model` value, read available models and current default from the local `codex` CLI in the same environment/account and only then update code/tests/docs.
+- Model identifiers in code/tests must come from centralized constants or a shared resolver helper; do not inline model string literals repeatedly.
+- Image input API must support passing local image data as file path, `FileInfo`, and `Stream`.
+- Use `Microsoft.Extensions.Logging.ILogger` for SDK logging extension points; do not introduce custom logger interfaces or custom log-level enums.
+- In tests, prefer `Microsoft.Extensions.Logging.Abstractions.NullLogger` instead of custom fake logger implementations when log capture is not required.
 - Default to AOT/trimming-safe patterns (explicit JSON handling, avoid reflection-heavy designs).
+- Avoid ambiguous option names like `*Override` for primary settings; prefer explicit names (for example executable path / working directory) and keep compatibility aliases only when necessary.
+- README first examples must be beginner-friendly: avoid advanced/optional knobs (for example `CodexPathOverride`) in the very first snippet.
+- When a README snippet shows model tuning, include `ModelReasoningEffort` together with `Model`.
+- Public examples should build output schemas with typed `StructuredOutputSchema` models and map responses to typed DTOs for readability and maintainability.
+- Do not keep or add `JsonSchema` helper abstractions in SDK API/tests; use typed request/response DTO models instead of schema-builder utilities.
+- Do not handcraft JSON with `JsonValue`/`JsonNode` literals for structured outputs in API/tests/examples; define typed DTO models and map schema/fields from those models.
+- Keep consumer usage examples in `README.md`; do not introduce standalone sample projects.
 
 ### Critical (NEVER violate)
 
@@ -165,9 +193,17 @@ If no new rule is detected -> do not update the file.
 - Explicit, deterministic behavior
 - Full test coverage for new logic
 - Clear docs with diagrams and direct code links
+- Simple onboarding examples first, advanced configuration later.
 
 ### Dislikes
 
 - Magic strings in protocol parsing and CLI mappings
 - Hidden assumptions in CI/release pipelines
+- Unreadable, non-idiomatic C# that looks chaotic and hard to reason about
+- Unjustified `lock`/thread-synchronization complexity that obscures intent and increases maintenance risk
 - Template placeholders left in production repository docs
+- Raw nested `JsonObject`/`JsonArray` schema literals in user-facing examples.
+- Public sample projects in this repository; prefer tests (including AOT tests) instead.
+- Custom logging abstractions when `ILogger` already solves the integration use case.
+- Performance tests that exercise only one parser payload and do not cover supported parsing branches.
+- Example code scattered across standalone sample projects instead of `README.md`.

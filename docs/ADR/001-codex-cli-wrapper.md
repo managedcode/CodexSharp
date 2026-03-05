@@ -10,7 +10,7 @@ To keep behavior parity and reduce protocol drift, this .NET SDK needs a transpo
 
 ## Decision
 
-Use the local Codex CLI process as the only runtime transport layer for `ManagedCode.CodexSharp`.
+Use the local Codex CLI process as the only runtime transport layer for `ManagedCode.CodexSharpSDK`.
 
 - `CodexExec` builds argument order and environment variables.
 - `DefaultCodexProcessRunner` starts process and streams stdout lines asynchronously.
@@ -20,7 +20,7 @@ Use the local Codex CLI process as the only runtime transport layer for `Managed
 
 ```mermaid
 flowchart LR
-  SDK["ManagedCode.CodexSharp"] --> Exec["CodexExec"]
+  SDK["ManagedCode.CodexSharpSDK"] --> Exec["CodexExec"]
   Exec --> Cli["codex exec --experimental-json"]
   Cli --> Jsonl["stdout JSONL"]
   Jsonl --> Parser["ThreadEventParser"]

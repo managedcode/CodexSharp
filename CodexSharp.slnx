@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="src/CodexSharp/CodexSharp.csproj" />
-  <Project Path="tests/CodexSharp.Tests/CodexSharp.Tests.csproj" />
-</Solution>

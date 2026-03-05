@@ -26,13 +26,13 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore
-        run: dotnet restore CodexSharp.slnx
+        run: dotnet restore ManagedCode.CodexSharpSDK.slnx
 
       - name: Build
-        run: dotnet build CodexSharp.slnx -c Release -warnaserror --no-restore
+        run: dotnet build ManagedCode.CodexSharpSDK.slnx -c Release -warnaserror --no-restore
 
       - name: Test
-        run: dotnet test --solution CodexSharp.slnx -c Release --no-build
+        run: dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release --no-build
 
   aot-smoke:
     name: NativeAOT Smoke
@@ -49,7 +49,7 @@ jobs:
 
       - name: Publish AOT smoke app
         run: |
-          dotnet publish samples/CodexSharp.AotSmoke/CodexSharp.AotSmoke.csproj \
+          dotnet publish tests/AotSmoke/ManagedCode.CodexSharpSDK.AotSmoke.csproj \
             -c Release \
             -r linux-x64 \
             -p:PublishAot=true \

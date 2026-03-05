@@ -1,0 +1,181 @@
+using System.Text.Json.Nodes;
+
+namespace ManagedCode.CodexSharpSDK.Tests;
+
+public class CodexThreadTests
+{
+    [Test]
+    public async Task RunAsync_WithRealCodexCli_ReturnsCompletedTurnAndUpdatesThreadId()
+    {
+        var settings = RealCodexTestSupport.TryGetSettings();
+        if (settings is null)
+        {
+            return;
+        }
+
+        await using var client = RealCodexTestSupport.CreateClient(settings);
+        var thread = StartRealIntegrationThread(client, settings.Model);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+
+        var result = await thread.RunAsync(
+            "Reply with short plain text: ok.",
+            new TurnOptions { CancellationToken = cancellation.Token });
+
+        await Assert.That(thread.Id).IsNotNull();
+        await Assert.That(result.FinalResponse).IsNotNull();
+        await Assert.That(result.Usage).IsNotNull();
+    }
+
+    [Test]
+    public async Task RunAsync_WithStructuredInput_ReturnsTypedJson()
+    {
+        var settings = RealCodexTestSupport.TryGetSettings();
+        if (settings is null)
+        {
+            return;
+        }
+
+        await using var client = RealCodexTestSupport.CreateClient(settings);
+        var thread = StartRealIntegrationThread(client, settings.Model);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+
+        var schema = StructuredOutputSchema.Map(
+            new Dictionary<string, StructuredOutputSchema>
+            {
+                ["status"] = StructuredOutputSchema.PlainText(),
+            },
+            required: ["status"],
+            additionalProperties: false);
+
+        var result = await thread.RunAsync(
+        [
+            new TextInput("Reply with a JSON object."),
+            new TextInput("Set status exactly to \"ok\"."),
+        ],
+        new TurnOptions
+        {
+            OutputSchema = schema,
+            CancellationToken = cancellation.Token,
+        });
+
+        var json = JsonNode.Parse(result.FinalResponse)?.AsObject();
+        await Assert.That(json).IsNotNull();
+        await Assert.That(json!["status"]!.GetValue<string>()).IsEqualTo("ok");
+    }
+
+    [Test]
+    public async Task RunAsync_SecondTurnKeepsThreadId_WithRealCodexCli()
+    {
+        var settings = RealCodexTestSupport.TryGetSettings();
+        if (settings is null)
+        {
+            return;
+        }
+
+        await using var client = RealCodexTestSupport.CreateClient(settings);
+        var thread = StartRealIntegrationThread(client, settings.Model);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+
+        var first = await thread.RunAsync(
+            "Reply with short plain text: first.",
+            new TurnOptions { CancellationToken = cancellation.Token });
+
+        var firstThreadId = thread.Id;
+        await Assert.That(firstThreadId).IsNotNull();
+        await Assert.That(first.Usage).IsNotNull();
+
+        var second = await thread.RunAsync(
+            "Reply with short plain text: second.",
+            new TurnOptions { CancellationToken = cancellation.Token });
+
+        await Assert.That(second.Usage).IsNotNull();
+        await Assert.That(thread.Id).IsEqualTo(firstThreadId);
+    }
+
+    [Test]
+    public async Task RunStreamedAsync_YieldsCompletedTurnEvent_WithRealCodexCli()
+    {
+        var settings = RealCodexTestSupport.TryGetSettings();
+        if (settings is null)
+        {
+            return;
+        }
+
+        await using var client = RealCodexTestSupport.CreateClient(settings);
+        var thread = StartRealIntegrationThread(client, settings.Model);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+
+        var streamed = await thread.RunStreamedAsync(
+            "Reply with short plain text: ok.",
+            new TurnOptions { CancellationToken = cancellation.Token });
+
+        var hasTurnCompleted = false;
+        var hasTurnFailed = false;
+        var hasCompletedItem = false;
+
+        await foreach (var threadEvent in streamed.Events.WithCancellation(cancellation.Token))
+        {
+            hasTurnCompleted |= threadEvent is TurnCompletedEvent;
+            hasTurnFailed |= threadEvent is TurnFailedEvent;
+            hasCompletedItem |= threadEvent is ItemCompletedEvent;
+        }
+
+        await Assert.That(hasCompletedItem).IsTrue();
+        await Assert.That(hasTurnCompleted).IsTrue();
+        await Assert.That(hasTurnFailed).IsFalse();
+        await Assert.That(thread.Id).IsNotNull();
+    }
+
+    [Test]
+    public async Task RunAsync_HonorsCancellationToken()
+    {
+        var exec = new CodexExec("codex");
+        var thread = new CodexThread(exec, new CodexOptions(), new ThreadOptions());
+
+        var cancellationSource = new CancellationTokenSource();
+        cancellationSource.Cancel();
+
+        var action = async () => await thread.RunAsync("cancel", new TurnOptions
+        {
+            CancellationToken = cancellationSource.Token,
+        });
+
+        var exception = await Assert.That(action).ThrowsException();
+        await Assert.That(exception).IsTypeOf<OperationCanceledException>();
+    }
+
+    [Test]
+    public async Task RunAsync_ThrowsObjectDisposedExceptionAfterDispose()
+    {
+        var exec = new CodexExec("codex");
+        var thread = new CodexThread(exec, new CodexOptions(), new ThreadOptions());
+        thread.Dispose();
+
+        var action = async () => await thread.RunAsync("after-dispose");
+        var exception = await Assert.That(action).ThrowsException();
+        await Assert.That(exception).IsTypeOf<ObjectDisposedException>();
+    }
+
+    [Test]
+    public Task Dispose_CanBeCalledMultipleTimes()
+    {
+        var exec = new CodexExec("codex");
+        var thread = new CodexThread(exec, new CodexOptions(), new ThreadOptions());
+
+        thread.Dispose();
+        thread.Dispose();
+
+        return Task.CompletedTask;
+    }
+
+    private static CodexThread StartRealIntegrationThread(CodexClient client, string model)
+    {
+        return client.StartThread(new ThreadOptions
+        {
+            Model = model,
+            ModelReasoningEffort = ModelReasoningEffort.Minimal,
+            SandboxMode = SandboxMode.WorkspaceWrite,
+            NetworkAccessEnabled = true,
+        });
+    }
+}

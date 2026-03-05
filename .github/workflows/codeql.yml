@@ -37,7 +37,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Build
-        run: dotnet build CodexSharp.slnx -c Release -warnaserror
+        run: dotnet build ManagedCode.CodexSharpSDK.slnx -c Release -warnaserror
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3

@@ -2,7 +2,7 @@
 
 Links:
 Architecture: [docs/Architecture/Overview.md](../Architecture/Overview.md)
-Modules: [CodexThread.cs](../../src/CodexSharp/CodexThread.cs), [CodexExec.cs](../../src/CodexSharp/CodexExec.cs), [ThreadEventParser.cs](../../src/CodexSharp/Internal/ThreadEventParser.cs)
+Modules: [CodexThread.cs](../../src/CodexThread.cs), [CodexExec.cs](../../src/CodexExec.cs), [ThreadEventParser.cs](../../src/Internal/ThreadEventParser.cs)
 ADRs: [001-codex-cli-wrapper.md](../ADR/001-codex-cli-wrapper.md), [002-protocol-parsing-and-thread-serialization.md](../ADR/002-protocol-parsing-and-thread-serialization.md)
 
 ---
@@ -36,6 +36,10 @@ Provide deterministic thread-based execution over Codex CLI so C# consumers can 
 - `turn.failed` must raise `ThreadRunException`.
 - Invalid JSONL event lines must fail fast with parse context.
 - Protocol tokens are parsed via constants, not inline literals.
+- Parser must support `collab_tool_call` items emitted by multi-agent operations.
+- Optional `ILogger` (`Microsoft.Extensions.Logging`) receives process lifecycle diagnostics (start/success/failure/cancellation).
+- Structured output uses typed `StructuredOutputSchema` models that are serialized to CLI JSON schema files.
+- `LocalImageInput` accepts image path, `FileInfo`, or `Stream`; stream inputs are materialized to temp files and cleaned after run.
 
 ---
 
@@ -81,17 +85,17 @@ flowchart LR
 
 ### Test commands
 
-- build: `dotnet build CodexSharp.slnx -c Release -warnaserror`
-- test: `dotnet test --solution CodexSharp.slnx -c Release`
-- format: `dotnet format CodexSharp.slnx`
-- coverage: `dotnet test --solution CodexSharp.slnx -c Release -- --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml`
+- build: `dotnet build ManagedCode.CodexSharpSDK.slnx -c Release -warnaserror`
+- test: `dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release`
+- format: `dotnet format ManagedCode.CodexSharpSDK.slnx`
+- coverage: `dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release -- --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml`
 
 ### Test mapping
 
-- CodexThread behavior: [CodexThreadTests.cs](../../tests/CodexSharp.Tests/CodexThreadTests.cs)
-- Protocol parsing: [ThreadEventParserTests.cs](../../tests/CodexSharp.Tests/ThreadEventParserTests.cs)
-- CLI argument mapping: [CodexExecTests.cs](../../tests/CodexSharp.Tests/CodexExecTests.cs)
-- Client lifecycle: [CodexClientTests.cs](../../tests/CodexSharp.Tests/CodexClientTests.cs)
+- CodexThread behavior: [CodexThreadTests.cs](../../tests/Unit/CodexThreadTests.cs)
+- Protocol parsing: [ThreadEventParserTests.cs](../../tests/Unit/ThreadEventParserTests.cs)
+- CLI argument mapping: [CodexExecTests.cs](../../tests/Unit/CodexExecTests.cs)
+- Client lifecycle: [CodexClientTests.cs](../../tests/Unit/CodexClientTests.cs)
 
 ---
 

@@ -30,23 +30,35 @@ jobs:
       - name: Extract version
         id: version
         run: |
-          VERSION=$(grep -oPm1 "(?<=<Version>)[^<]+" Directory.Build.props)
+          VERSION=$(dotnet msbuild src/CodexSharpSDK.csproj -nologo -getProperty:Version)
+          if [ -z "$VERSION" ]; then
+            echo "Failed to resolve package version from project file."
+            exit 1
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION"
 
+      - name: Validate semantic version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Version '$VERSION' is not a valid semantic version."
+            exit 1
+          fi
+
       - name: Restore
-        run: dotnet restore CodexSharp.slnx
+        run: dotnet restore ManagedCode.CodexSharpSDK.slnx
 
       - name: Build
-        run: dotnet build CodexSharp.slnx -c Release -warnaserror --no-restore
+        run: dotnet build ManagedCode.CodexSharpSDK.slnx -c Release -warnaserror --no-restore
 
       - name: Test
-        run: dotnet test --solution CodexSharp.slnx -c Release --no-build
+        run: dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release --no-build
 
       - name: Pack
         run: |
           mkdir -p artifacts
-          dotnet pack src/CodexSharp/CodexSharp.csproj \
+          dotnet pack src/CodexSharpSDK.csproj \
             -c Release \
             --no-build \
             -o artifacts
@@ -145,30 +157,12 @@ jobs:
             git push origin "$TAG"
           fi
 
-      - name: Generate release notes
-        run: |
-          VERSION="${{ needs.publish.outputs.version }}"
-          {
-            echo "# ManagedCode.CodexSharp $VERSION"
-            echo
-            echo "Released on $(date +'%Y-%m-%d')"
-            echo
-            echo "## Packages"
-            for package in artifacts/*.nupkg; do
-              if [[ "$package" == *.snupkg ]]; then
-                continue
-              fi
-              name=$(basename "$package")
-              echo "- $name"
-            done
-          } > release_notes.md
-
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.publish.outputs.version }}
           name: v${{ needs.publish.outputs.version }}
-          body_path: release_notes.md
+          generate_release_notes: true
           files: artifacts/*.*nupkg
           draft: false
           prerelease: false

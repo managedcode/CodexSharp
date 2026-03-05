@@ -1,13 +1,13 @@
 # Architecture Overview
 
-Goal: understand quickly what exists in `ManagedCode.CodexSharp`, where it lives, and how modules interact.
+Goal: understand quickly what exists in `ManagedCode.CodexSharpSDK`, where it lives, and how modules interact.
 
 Single source of truth: this file is navigational and coarse. Detailed behavior lives in `docs/Features/*`. Architectural rationale lives in `docs/ADR/*`.
 
 ## Summary
 
 - **System:** .NET SDK wrapper over Codex CLI JSONL protocol.
-- **Where is the code:** `src/CodexSharp`, tests in `tests/CodexSharp.Tests`, sample in `samples/CodexSharp.AotSmoke`.
+- **Where is the code:** `src`, tests in `tests` (including AOT smoke project).
 - **Entry points:** `CodexClient`.
 - **Dependencies:** local `codex` CLI process, `System.Text.Json`, .NET SDK/toolchain, GitHub Actions.
 
@@ -79,34 +79,33 @@ flowchart LR
 
 ### 2.1 Modules
 
-- `Public API` — code: [CodexClient.cs](../../src/CodexSharp/CodexClient.cs), [CodexThread.cs](../../src/CodexSharp/CodexThread.cs); docs: [thread-run-flow.md](../Features/thread-run-flow.md)
-- `Execution Layer` — code: [CodexExec.cs](../../src/CodexSharp/CodexExec.cs), [CodexExecArgs.cs](../../src/CodexSharp/CodexExecArgs.cs)
-- `Protocol Parsing` — code: [ThreadEventParser.cs](../../src/CodexSharp/Internal/ThreadEventParser.cs), [CodexProtocolConstants.cs](../../src/CodexSharp/Internal/CodexProtocolConstants.cs), [Events.cs](../../src/CodexSharp/Events.cs), [Items.cs](../../src/CodexSharp/Items.cs)
-- `Config & Schema IO` — code: [TomlConfigSerializer.cs](../../src/CodexSharp/Internal/TomlConfigSerializer.cs), [OutputSchemaFile.cs](../../src/CodexSharp/Internal/OutputSchemaFile.cs)
-- `Testing` — code: [tests/CodexSharp.Tests](../../tests/CodexSharp.Tests); docs: [strategy.md](../Testing/strategy.md)
-- `Automation` — workflows: [.github/workflows](../../.github/workflows); docs: [release-and-sync-automation.md](../Features/release-and-sync-automation.md)
+- `Public API` — code: [CodexClient.cs](../../src/CodexClient.cs), [CodexThread.cs](../../src/CodexThread.cs); docs: [thread-run-flow.md](../Features/thread-run-flow.md)
+- `Execution Layer` — code: [CodexExec.cs](../../src/CodexExec.cs), [CodexExecArgs.cs](../../src/CodexExecArgs.cs)
+- `Protocol Parsing` — code: [ThreadEventParser.cs](../../src/Internal/ThreadEventParser.cs), [CodexProtocolConstants.cs](../../src/Internal/CodexProtocolConstants.cs), [Events.cs](../../src/Events.cs), [Items.cs](../../src/Items.cs)
+- `Config & Schema IO` — code: [TomlConfigSerializer.cs](../../src/Internal/TomlConfigSerializer.cs), [OutputSchemaFile.cs](../../src/Internal/OutputSchemaFile.cs)
+- `Testing` — code: [tests](../../tests); docs: [strategy.md](../Testing/strategy.md)
+- `Automation` — workflows: [.github/workflows](../../.github/workflows) (including `real-integration.yml`); docs: [release-and-sync-automation.md](../Features/release-and-sync-automation.md)
 
 ### 2.2 Interfaces / contracts
 
-- `Codex CLI invocation contract` — source: [CodexExec.cs](../../src/CodexSharp/CodexExec.cs); producer: `CodexExec`; consumer: local `codex` binary; rationale: [001-codex-cli-wrapper.md](../ADR/001-codex-cli-wrapper.md)
-- `JSONL thread event contract` — source: [ThreadEventParser.cs](../../src/CodexSharp/Internal/ThreadEventParser.cs); producer: Codex CLI; consumer: `CodexThread`; rationale: [002-protocol-parsing-and-thread-serialization.md](../ADR/002-protocol-parsing-and-thread-serialization.md)
+- `Codex CLI invocation contract` — source: [CodexExec.cs](../../src/CodexExec.cs); producer: `CodexExec`; consumer: local `codex` binary; rationale: [001-codex-cli-wrapper.md](../ADR/001-codex-cli-wrapper.md)
+- `JSONL thread event contract` — source: [ThreadEventParser.cs](../../src/Internal/ThreadEventParser.cs); producer: Codex CLI; consumer: `CodexThread`; rationale: [002-protocol-parsing-and-thread-serialization.md](../ADR/002-protocol-parsing-and-thread-serialization.md)
 
 ### 2.3 Key classes / types
 
-- `CodexClient` — [CodexClient.cs](../../src/CodexSharp/CodexClient.cs)
-- `CodexThread` — [CodexThread.cs](../../src/CodexSharp/CodexThread.cs)
-- `CodexExec` — [CodexExec.cs](../../src/CodexSharp/CodexExec.cs)
-- `ThreadEventParser` — [ThreadEventParser.cs](../../src/CodexSharp/Internal/ThreadEventParser.cs)
-- `CodexProtocolConstants` — [CodexProtocolConstants.cs](../../src/CodexSharp/Internal/CodexProtocolConstants.cs)
+- `CodexClient` — [CodexClient.cs](../../src/CodexClient.cs)
+- `CodexThread` — [CodexThread.cs](../../src/CodexThread.cs)
+- `CodexExec` — [CodexExec.cs](../../src/CodexExec.cs)
+- `ThreadEventParser` — [ThreadEventParser.cs](../../src/Internal/ThreadEventParser.cs)
+- `CodexProtocolConstants` — [CodexProtocolConstants.cs](../../src/Internal/CodexProtocolConstants.cs)
 
 ## 3) Dependency rules
 
 - Allowed dependencies:
   - `tests/*` -> `src/*`
-  - `samples/*` -> `src/*`
   - Public API (`CodexClient`, `CodexThread`) -> internal execution/parsing helpers.
 - Forbidden dependencies:
-  - No dependency from `src/*` to `tests/*` or `samples/*`.
+  - No dependency from `src/*` to `tests/*`.
   - No runtime dependency on `submodules/openai-codex`; submodule is reference-only.
 - Integration style:
   - sync configuration + async process stream consumption (`IAsyncEnumerable<string>`)
