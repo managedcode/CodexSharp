@@ -16,6 +16,11 @@
 
   </PropertyGroup>
 
+  <PropertyGroup>
+    <RepositoryReadmeFileName>README.md</RepositoryReadmeFileName>
+    <RepositoryReadmeFilePath>$(MSBuildThisFileDirectory)$(RepositoryReadmeFileName)</RepositoryReadmeFilePath>
+  </PropertyGroup>
+
   <!-- NuGet package metadata and versioning -->
   <PropertyGroup>
     <Authors>ManagedCode</Authors>
@@ -24,7 +29,6 @@
     <RepositoryUrl>https://github.com/managedcode/CodexSharpSDK</RepositoryUrl>
     <PackageProjectUrl>https://github.com/managedcode/CodexSharpSDK</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <EnablePackageValidation>true</EnablePackageValidation>
@@ -32,8 +36,12 @@
     <PackageVersion>$(Version)</PackageVersion>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="/" Visible="false" />
+  <PropertyGroup Condition="'$(IsPackable)' != 'false'">
+    <PackageReadmeFile>$(RepositoryReadmeFileName)</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Include="$(RepositoryReadmeFilePath)" Pack="true" PackagePath="/" Visible="false" />
   </ItemGroup>
 
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' or '$(CI)' == 'true' or '$(TF_BUILD)' == 'true'">

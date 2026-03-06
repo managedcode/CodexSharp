@@ -168,6 +168,7 @@ If no new rule is detected -> do not update the file.
 - Keep public API and naming aligned with package/namespace `ManagedCode.CodexSharpSDK`.
 - Solution/workspace file naming must use `ManagedCode.CodexSharpSDK` prefix for consistency with package identity.
 - Keep package/version metadata centralized in `Directory.Build.props`; avoid duplicating version structure or release metadata blocks in individual `.csproj` files unless a project-specific override is required.
+- Keep shared NuGet package metadata such as `PackageReadmeFile` in global `Directory.Build.props` for packable projects; do not duplicate it in individual `.csproj` files because package presentation must stay consistent across packages.
 - Never hardcode guessed Codex/OpenAI model names in tests, docs, or defaults; verify supported models and active default via Codex CLI first.
 - Before setting or changing any `Model` value, read available models and current default from the local `codex` CLI in the same environment/account and only then update code/tests/docs.
 - Model identifiers in code/tests must come from centralized constants or a shared resolver helper; do not inline model string literals repeatedly.
