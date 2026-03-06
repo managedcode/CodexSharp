@@ -45,6 +45,7 @@ Keep package quality and upstream Codex CLI parity automatically verified throug
 - Codex CLI watch runs daily and opens issue when upstream `openai/codex` changed since pinned submodule SHA.
 - Completing a Codex CLI sync issue must update the pinned `submodules/openai-codex` commit after validation.
 - Sync issue body must derive flag changes from CLI source snapshots, model changes from `codex-rs/core/models.json`, and feature changes from `codex-rs/core/config.schema.json` so alerts stay actionable.
+- SDK model constants must cover every bundled slug from `submodules/openai-codex/codex-rs/core/models.json` whenever upstream Codex repo sync work updates the pinned submodule.
 - Sync issue must assign Copilot by default.
 - Duplicate sync issue for same upstream SHA is not allowed.
 

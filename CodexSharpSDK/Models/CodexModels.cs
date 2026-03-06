@@ -12,6 +12,8 @@ public static class CodexModels
     public const string Gpt51 = "gpt-5.1";
     public const string Gpt5Codex = "gpt-5-codex";
     public const string Gpt5 = "gpt-5";
+    public const string GptOss120b = "gpt-oss-120b";
+    public const string GptOss20b = "gpt-oss-20b";
     public const string Gpt51CodexMini = "gpt-5.1-codex-mini";
     public const string Gpt5CodexMini = "gpt-5-codex-mini";
 }
