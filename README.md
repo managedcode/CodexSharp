@@ -4,7 +4,7 @@
 [![Release](https://github.com/managedcode/CodexSharpSDK/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/managedcode/CodexSharpSDK/actions/workflows/release.yml)
 [![CodeQL](https://github.com/managedcode/CodexSharpSDK/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/managedcode/CodexSharpSDK/actions/workflows/codeql.yml)
 [![NuGet](https://img.shields.io/nuget/v/ManagedCode.CodexSharpSDK.svg)](https://www.nuget.org/packages/ManagedCode.CodexSharpSDK)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/managedcode/CodexSharpSDK/blob/main/LICENSE)
 
 `ManagedCode.CodexSharpSDK` is an open-source .NET SDK for driving the Codex CLI from C#.
 
@@ -386,7 +386,7 @@ foreach (var content in response.Messages.SelectMany(m => m.Contents))
 }
 ```
 
-See [docs/Features/meai-integration.md](docs/Features/meai-integration.md) and [ADR 003](docs/ADR/003-microsoft-extensions-ai-integration.md) for full details.
+See [docs/Features/meai-integration.md](https://github.com/managedcode/CodexSharpSDK/blob/main/docs/Features/meai-integration.md) and [ADR 003](https://github.com/managedcode/CodexSharpSDK/blob/main/docs/ADR/003-microsoft-extensions-ai-integration.md) for full details.
 
 ## Build and Test
 
