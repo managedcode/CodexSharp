@@ -124,7 +124,7 @@ public class CodexCliMetadataReaderTests
     }
 
     [Test]
-    public async Task ParseModelsCache_ParsesListedAndHiddenModels()
+    public async Task ParseModelsCache_ParsesCurrentUpstreamModelShape()
     {
         const string json = """
                             {
@@ -135,16 +135,38 @@ public class CodexCliMetadataReaderTests
                                   "description": "Latest frontier agentic coding model.",
                                   "visibility": "list",
                                   "supported_in_api": true,
+                                  "default_reasoning_summary": "none",
+                                  "availability_nux": null,
+                                  "upgrade": {
+                                    "model": "gpt-5.4",
+                                    "migration_markdown": "Introducing GPT-5.4"
+                                  },
                                   "supported_reasoning_levels": [
                                     { "effort": "low" },
                                     { "effort": "high" }
                                   ]
                                 },
                                 {
-                                  "slug": "gpt-5.1-codex",
-                                  "display_name": "gpt-5.1-codex",
+                                  "slug": "gpt-5.4",
+                                  "display_name": "gpt-5.4",
+                                  "description": "Latest frontier agentic coding model.",
+                                  "visibility": "list",
+                                  "supported_in_api": true,
+                                  "default_reasoning_summary": "none",
+                                  "availability_nux": null,
+                                  "upgrade": null,
+                                  "supported_reasoning_levels": [
+                                    { "effort": "medium" },
+                                    { "effort": "xhigh" }
+                                  ]
+                                },
+                                {
+                                  "slug": "gpt-5.1-codex-mini",
+                                  "display_name": "gpt-5.1-codex-mini",
                                   "visibility": "hidden",
                                   "supported_in_api": false,
+                                  "default_reasoning_summary": "auto",
+                                  "availability_nux": null,
                                   "supported_reasoning_levels": []
                                 },
                                 {
@@ -157,14 +179,19 @@ public class CodexCliMetadataReaderTests
         using var document = JsonDocument.Parse(json);
         var parsed = CodexCliMetadataReader.ParseModelsCache(document.RootElement);
 
-        await Assert.That(parsed).Count().IsEqualTo(2);
+        await Assert.That(parsed).Count().IsEqualTo(3);
         await Assert.That(parsed[0].Slug).IsEqualTo("gpt-5.3-codex");
         await Assert.That(parsed[0].IsListed).IsTrue();
         await Assert.That(parsed[0].IsApiSupported).IsTrue();
         await Assert.That(parsed[0].SupportedReasoningEfforts).IsEquivalentTo(["low", "high"]);
 
-        await Assert.That(parsed[1].Slug).IsEqualTo("gpt-5.1-codex");
-        await Assert.That(parsed[1].IsListed).IsFalse();
-        await Assert.That(parsed[1].IsApiSupported).IsFalse();
+        await Assert.That(parsed[1].Slug).IsEqualTo("gpt-5.4");
+        await Assert.That(parsed[1].IsListed).IsTrue();
+        await Assert.That(parsed[1].IsApiSupported).IsTrue();
+        await Assert.That(parsed[1].SupportedReasoningEfforts).IsEquivalentTo(["medium", "xhigh"]);
+
+        await Assert.That(parsed[2].Slug).IsEqualTo("gpt-5.1-codex-mini");
+        await Assert.That(parsed[2].IsListed).IsFalse();
+        await Assert.That(parsed[2].IsApiSupported).IsFalse();
     }
 }

@@ -41,6 +41,7 @@ Keep package quality and upstream Codex CLI parity automatically verified throug
 - Release workflow must use generated GitHub release notes.
 - Release workflow must create/push git tag `v<version>` before publishing GitHub release.
 - Codex CLI watch runs daily and opens issue when upstream `openai/codex` changed since pinned submodule SHA.
+- Completing a Codex CLI sync issue must update the pinned `submodules/openai-codex` commit after validation.
 - Sync issue body must include detected candidate changes for CLI flags/models/features and actionable checklist.
 - Sync issue must assign Copilot by default.
 - Duplicate sync issue for same upstream SHA is not allowed.
@@ -65,6 +66,9 @@ flowchart LR
 
 ### Test commands
 
+- `codex --help`
+- `codex exec --help`
+- `codex features list`
 - `dotnet build ManagedCode.CodexSharpSDK.slnx -c Release -warnaserror`
 - `dotnet test --solution ManagedCode.CodexSharpSDK.slnx -c Release`
 

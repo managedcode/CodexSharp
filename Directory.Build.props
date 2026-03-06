@@ -28,7 +28,7 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <EnablePackageValidation>true</EnablePackageValidation>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <PackageVersion>$(Version)</PackageVersion>
   </PropertyGroup>
 
