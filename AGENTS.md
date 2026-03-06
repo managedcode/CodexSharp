@@ -95,6 +95,7 @@ If no new rule is detected -> do not update the file.
   - full solution tests
   - format
   - final build
+- Do not bump package/release version for test-only changes, including PRs driven by submodule sync, when they do not modify the repository's shipped SDK code or consumer-facing behavior; commit those changes without a release to avoid unnecessary package churn.
 - If changes impact trimming/AOT safety, validate via AOT-safe API design (for example `JsonTypeInfo<T>` overloads and annotations) and existing test/build gates; do not introduce a dedicated AOT smoke test project unless explicitly requested.
 
 ### Documentation (ALL TASKS)
