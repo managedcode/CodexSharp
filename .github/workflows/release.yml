@@ -41,16 +41,11 @@ jobs:
       id: version
       run: |
         VERSION=$(grep -oPm1 "(?<=<Version>)[^<]+" Directory.Build.props)
-        AGENT_FRAMEWORK_SUFFIX=$(grep -oPm1 "(?<=<AgentFrameworkPackageVersionSuffix>)[^<]+" Directory.Build.props)
         if [ -z "$VERSION" ]; then
           echo "Failed to resolve package version from Directory.Build.props"
           exit 1
         fi
-        if [ -z "$AGENT_FRAMEWORK_SUFFIX" ]; then
-          echo "Failed to resolve Agent Framework package suffix from Directory.Build.props"
-          exit 1
-        fi
-        AGENT_FRAMEWORK_VERSION="$VERSION-$AGENT_FRAMEWORK_SUFFIX"
+        AGENT_FRAMEWORK_VERSION="$VERSION-rc4"
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
         echo "agent_framework_version=$AGENT_FRAMEWORK_VERSION" >> "$GITHUB_OUTPUT"
         echo "Version from Directory.Build.props: $VERSION"
