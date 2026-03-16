@@ -79,14 +79,15 @@ jobs:
     - name: Pack NuGet packages
       run: |
         mkdir -p ./artifacts
-        dotnet pack CodexSharpSDK/CodexSharpSDK.csproj --configuration Release --no-build -p:IncludeSymbols=false -p:SymbolPackageFormat=snupkg --output ./artifacts
-        dotnet pack CodexSharpSDK.Extensions.AgentFramework/CodexSharpSDK.Extensions.AgentFramework.csproj --configuration Release --no-build -p:IncludeSymbols=false -p:SymbolPackageFormat=snupkg --output ./artifacts
+        dotnet pack ManagedCode.CodexSharpSDK.slnx --configuration Release --no-build -p:IncludeSymbols=false -p:SymbolPackageFormat=snupkg --output ./artifacts
 
     - name: Validate packed artifacts
       run: |
         VERSION="${{ steps.version.outputs.version }}"
         AGENT_FRAMEWORK_VERSION="${{ steps.version.outputs.agent_framework_version }}"
+        find ./artifacts -maxdepth 1 -name '*.nupkg' | sort
         test -f "./artifacts/ManagedCode.CodexSharpSDK.$VERSION.nupkg"
+        test -f "./artifacts/ManagedCode.CodexSharpSDK.Extensions.AI.$VERSION.nupkg"
         test -f "./artifacts/ManagedCode.CodexSharpSDK.Extensions.AgentFramework.$AGENT_FRAMEWORK_VERSION.nupkg"
 
     - name: Upload artifacts
@@ -252,8 +253,17 @@ jobs:
         echo "" >> release_notes.md
         echo "## NuGet Packages" >> release_notes.md
         echo "" >> release_notes.md
-        echo "- [ManagedCode.CodexSharpSDK v$VERSION](https://www.nuget.org/packages/ManagedCode.CodexSharpSDK/$VERSION)" >> release_notes.md
-        echo "- [ManagedCode.CodexSharpSDK.Extensions.AgentFramework v$AGENT_FRAMEWORK_VERSION](https://www.nuget.org/packages/ManagedCode.CodexSharpSDK.Extensions.AgentFramework/$AGENT_FRAMEWORK_VERSION)" >> release_notes.md
+        shopt -s nullglob
+        for package in ./artifacts/*.nupkg; do
+          base_name=$(basename "$package" .nupkg)
+          if [[ "$base_name" =~ ^(.+)\.([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?)$ ]]; then
+            PACKAGE_ID="${BASH_REMATCH[1]}"
+            PACKAGE_VERSION="${BASH_REMATCH[2]}"
+            echo "- [$PACKAGE_ID v$PACKAGE_VERSION](https://www.nuget.org/packages/$PACKAGE_ID/$PACKAGE_VERSION)" >> release_notes.md
+          else
+            echo "- $base_name" >> release_notes.md
+          fi
+        done
 
         echo "" >> release_notes.md
         echo "---" >> release_notes.md
