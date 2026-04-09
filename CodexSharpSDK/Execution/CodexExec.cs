@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ManagedCode.CodexSharpSDK.Execution;
 
-public sealed class CodexExec
+public sealed class CodexExec : IDisposable
 {
     private const string ExecCommandName = "exec";
     private const string ResumeCommandName = "resume";
@@ -55,6 +55,7 @@ public sealed class CodexExec
     private readonly JsonObject? _configOverrides;
     private readonly ICodexProcessRunner _processRunner;
     private readonly ILogger _logger;
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
 
     public CodexExec(
         string? executablePath = null,
@@ -90,10 +91,23 @@ public sealed class CodexExec
         return RunWithDiagnosticsAsync(invocation, args.CancellationToken);
     }
 
+    internal void CancelActiveRuns() => _lifetimeCancellation.Cancel();
+
+    public void Dispose()
+    {
+        _lifetimeCancellation.Cancel();
+        _lifetimeCancellation.Dispose();
+    }
+
     private async IAsyncEnumerable<string> RunWithDiagnosticsAsync(
         CodexProcessInvocation invocation,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            _lifetimeCancellation.Token);
+        var effectiveCancellationToken = linkedCancellation.Token;
+
         Logging.CodexExecLog.Starting(_logger, invocation.ExecutablePath, invocation.Arguments.Count);
 
         var lineCount = 0;
@@ -102,10 +116,10 @@ public sealed class CodexExec
         try
         {
             enumerator = _processRunner
-                .RunAsync(invocation, _logger, cancellationToken)
-                .GetAsyncEnumerator(cancellationToken);
+                .RunAsync(invocation, _logger, effectiveCancellationToken)
+                .GetAsyncEnumerator(effectiveCancellationToken);
         }
-        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException exception) when (effectiveCancellationToken.IsCancellationRequested)
         {
             Logging.CodexExecLog.Cancelled(_logger, exception);
             throw;
@@ -118,7 +132,7 @@ public sealed class CodexExec
 
         await using (enumerator)
         {
-            while (!cancellationToken.IsCancellationRequested)
+            while (!effectiveCancellationToken.IsCancellationRequested)
             {
                 string line;
                 try
@@ -130,7 +144,7 @@ public sealed class CodexExec
 
                     line = enumerator.Current;
                 }
-                catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+                catch (OperationCanceledException exception) when (effectiveCancellationToken.IsCancellationRequested)
                 {
                     Logging.CodexExecLog.Cancelled(_logger, exception);
                     throw;
@@ -435,6 +449,7 @@ internal sealed class DefaultCodexProcessRunner : ICodexProcessRunner
         }
 
         using var process = new Process { StartInfo = startInfo };
+        Task<string>? standardErrorTask = null;
         try
         {
             if (!process.Start())
@@ -453,11 +468,30 @@ internal sealed class DefaultCodexProcessRunner : ICodexProcessRunner
             await process.StandardInput.FlushAsync(cancellationToken).ConfigureAwait(false);
             process.StandardInput.Close();
 
-            var standardErrorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            standardErrorTask = process.StandardError.ReadToEndAsync(CancellationToken.None);
 
             while (!cancellationToken.IsCancellationRequested)
             {
-                var line = await process.StandardOutput.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+                string? line;
+                try
+                {
+                    line = await process.StandardOutput.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    var terminatedByCancellation = await EnsureProcessExitedAfterCancellationAsync(
+                        process,
+                        invocation.ExecutablePath,
+                        logger).ConfigureAwait(false);
+                    var capturedStandardError = await standardErrorTask.ConfigureAwait(false);
+                    if (!terminatedByCancellation && process.ExitCode != 0)
+                    {
+                        throw new InvalidOperationException($"Codex Exec exited with code {process.ExitCode}: {capturedStandardError}");
+                    }
+
+                    throw;
+                }
+
                 if (line is null)
                 {
                     break;
@@ -466,8 +500,12 @@ internal sealed class DefaultCodexProcessRunner : ICodexProcessRunner
                 yield return line;
             }
 
-            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-            var standardError = await standardErrorTask.ConfigureAwait(false);
+            var standardError = await CompleteProcessAsync(
+                process,
+                standardErrorTask,
+                invocation.ExecutablePath,
+                logger,
+                cancellationToken).ConfigureAwait(false);
             if (process.ExitCode != 0)
             {
                 throw new InvalidOperationException($"Codex Exec exited with code {process.ExitCode}: {standardError}");
@@ -476,7 +514,62 @@ internal sealed class DefaultCodexProcessRunner : ICodexProcessRunner
         finally
         {
             TryKillProcess(process, invocation.ExecutablePath, logger);
+            if (standardErrorTask is not null)
+            {
+                try
+                {
+                    await standardErrorTask.ConfigureAwait(false);
+                }
+                catch (Exception exception)
+                {
+                    Logging.CodexExecLog.StandardErrorReadFailed(logger, invocation.ExecutablePath, exception);
+                }
+            }
         }
+    }
+
+    private static async Task<string> CompleteProcessAsync(
+        Process process,
+        Task<string> standardErrorTask,
+        string executablePath,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            var terminatedByCancellation = await EnsureProcessExitedAfterCancellationAsync(
+                process,
+                executablePath,
+                logger).ConfigureAwait(false);
+            var standardError = await standardErrorTask.ConfigureAwait(false);
+            if (!terminatedByCancellation)
+            {
+                return standardError;
+            }
+
+            throw;
+        }
+
+        return await standardErrorTask.ConfigureAwait(false);
+    }
+
+    private static async Task<bool> EnsureProcessExitedAfterCancellationAsync(
+        Process process,
+        string executablePath,
+        ILogger logger)
+    {
+        if (process.HasExited)
+        {
+            return false;
+        }
+
+        TryKillProcess(process, executablePath, logger);
+        await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+        return true;
     }
 
     private static void TryKillProcess(Process process, string executablePath, ILogger logger)

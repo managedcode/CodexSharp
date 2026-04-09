@@ -15,4 +15,10 @@ internal static partial class CodexThreadLog
         Level = LogLevel.Warning,
         Message = "Failed to delete output schema directory '{SchemaDirectory}' during cleanup.")]
     public static partial void OutputSchemaDeleteFailed(ILogger logger, string schemaDirectory, Exception exception);
+
+    [LoggerMessage(
+        EventId = 1102,
+        Level = LogLevel.Warning,
+        Message = "Failed to dispose owned local image input stream during cleanup.")]
+    public static partial void InputStreamDisposeFailed(ILogger logger, Exception exception);
 }

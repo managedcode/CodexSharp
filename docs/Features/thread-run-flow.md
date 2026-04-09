@@ -42,8 +42,10 @@ Provide deterministic thread-based execution over Codex CLI so C# consumers can 
 - Parser must support `collab_tool_call` items emitted by multi-agent operations.
 - Parser must accept `file_change` lifecycle statuses across started/completed events, including `in_progress` payloads emitted before patch application finishes.
 - Optional `ILogger` (`Microsoft.Extensions.Logging`) receives process lifecycle diagnostics (start/success/failure/cancellation).
+- `CodexClient.StopAsync()` and `Dispose()` cancel active runs bound to the current `CodexExec` instance before disconnecting client state.
 - Structured output uses typed `StructuredOutputSchema` models (including DTO property selectors) that are serialized to CLI JSON schema files.
 - `LocalImageInput` accepts image path, `FileInfo`, or `Stream`; stream inputs are materialized to temp files and cleaned after run.
+- If stream-backed local image materialization fails mid-batch, SDK still disposes owned streams and deletes temp image files already created for that batch.
 - Codex executable resolution is deterministic: prefer npm-vendored native binary, then PATH lookup; on Windows PATH lookup checks `codex.exe`, `codex.cmd`, `codex.bat`, then `codex`.
 - Thread options map full Codex CLI flags (`profile`, `enable/disable`, OSS provider, ephemeral/color/progress/output options), plus raw `AdditionalCliArguments` passthrough for forward-compatible flags.
 - Explicit `ThreadOptions.Ephemeral = false` must override inherited Codex config/profile `ephemeral = true`, so SDK callers can force persistent rollout storage deterministically.

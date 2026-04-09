@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Text.Json.Nodes;
 using ManagedCode.CodexSharpSDK.Client;
 using ManagedCode.CodexSharpSDK.Execution;
@@ -298,6 +299,107 @@ public class CodexExecTests
         await Assert.That(lines.Any(line => line.Contains("\"type\":\"turn.completed\"", StringComparison.Ordinal))).IsTrue();
     }
 
+    [Test]
+    public async Task DefaultProcessRunner_CancellationAfterProcessExit_StillReturnsProcessFailure()
+    {
+        var sandboxDirectory = CreateSandboxDirectory();
+
+        try
+        {
+            var shellScript = CreateShellScript(
+                sandboxDirectory,
+                "stderr-race",
+                OperatingSystem.IsWindows()
+                    ? """
+                      for /L %%i in (1,1,20000) do @echo error-line-%%i 1>&2
+                      echo done
+                      exit /b 23
+                      """
+                    : """
+                      i=1
+                      while [ "$i" -le 20000 ]
+                      do
+                        echo "error-line-$i" 1>&2
+                        i=$((i + 1))
+                      done
+                      echo done
+                      exit 23
+                      """);
+            var runner = new DefaultCodexProcessRunner();
+            using var cancellation = new CancellationTokenSource();
+
+            await using var enumerator = runner.RunAsync(
+                    shellScript.Invocation,
+                    NullLogger.Instance,
+                    cancellation.Token)
+                .GetAsyncEnumerator(cancellation.Token);
+
+            await Assert.That(await enumerator.MoveNextAsync()).IsTrue();
+            await Assert.That(enumerator.Current).IsEqualTo("done");
+
+            cancellation.Cancel();
+
+            var action = async () => await enumerator.MoveNextAsync();
+            var exception = await Assert.That(action).ThrowsException();
+
+            await Assert.That(exception).IsTypeOf<InvalidOperationException>();
+            await Assert.That(exception!.Message).Contains("Codex Exec exited with code 23");
+            await Assert.That(exception.Message).Contains("error-line-1");
+        }
+        finally
+        {
+            Directory.Delete(sandboxDirectory, recursive: true);
+        }
+    }
+
+    [Test]
+    public async Task DefaultProcessRunner_CancellationWhileProcessStillRunning_ThrowsOperationCanceledException()
+    {
+        var sandboxDirectory = CreateSandboxDirectory();
+
+        try
+        {
+            var shellScript = CreateShellScript(
+                sandboxDirectory,
+                "stderr-cancel",
+                OperatingSystem.IsWindows()
+                    ? """
+                      echo started
+                      :loop
+                      echo error-line 1>&2
+                      goto loop
+                      """
+                    : """
+                      echo started
+                      while :
+                      do
+                        echo error-line 1>&2
+                      done
+                      """);
+            var runner = new DefaultCodexProcessRunner();
+            using var cancellation = new CancellationTokenSource();
+
+            await using var enumerator = runner.RunAsync(
+                    shellScript.Invocation,
+                    NullLogger.Instance,
+                    cancellation.Token)
+                .GetAsyncEnumerator(cancellation.Token);
+
+            await Assert.That(await enumerator.MoveNextAsync()).IsTrue();
+            await Assert.That(enumerator.Current).IsEqualTo("started");
+
+            cancellation.Cancel();
+
+            var action = async () => await enumerator.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+            var exception = await Assert.That(action).ThrowsException();
+            await Assert.That(exception).IsTypeOf<OperationCanceledException>();
+        }
+        finally
+        {
+            Directory.Delete(sandboxDirectory, recursive: true);
+        }
+    }
+
     private static async Task DrainAsync(IAsyncEnumerable<string> lines)
     {
         await foreach (var _ in lines)
@@ -316,6 +418,53 @@ public class CodexExecTests
         }
 
         return result;
+    }
+
+    private static string CreateSandboxDirectory()
+    {
+        var sandboxDirectory = Path.Combine(
+            Environment.CurrentDirectory,
+            "tests",
+            ".sandbox",
+            $"CodexExecTests-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxDirectory);
+        return sandboxDirectory;
+    }
+
+    private static ShellScriptHandle CreateShellScript(string sandboxDirectory, string name, string body)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var scriptPath = Path.Combine(sandboxDirectory, $"{name}.cmd");
+            File.WriteAllText(scriptPath, $"@echo off{Environment.NewLine}{body}{Environment.NewLine}");
+            return new ShellScriptHandle(
+                scriptPath,
+                new CodexProcessInvocation(
+                    "cmd.exe",
+                    ["/d", "/s", "/c", scriptPath],
+                    CreateProcessEnvironment(),
+                    string.Empty));
+        }
+
+        var scriptFilePath = Path.Combine(sandboxDirectory, $"{name}.sh");
+        File.WriteAllText(scriptFilePath, $"#!/bin/sh{Environment.NewLine}{body}{Environment.NewLine}");
+        return new ShellScriptHandle(
+            scriptFilePath,
+            new CodexProcessInvocation(
+                "/bin/sh",
+                [scriptFilePath],
+                CreateProcessEnvironment(),
+                string.Empty));
+    }
+
+    private static Dictionary<string, string> CreateProcessEnvironment()
+    {
+        return Environment.GetEnvironmentVariables()
+            .Cast<DictionaryEntry>()
+            .ToDictionary(
+                entry => entry.Key?.ToString() ?? string.Empty,
+                entry => entry.Value?.ToString() ?? string.Empty,
+                StringComparer.Ordinal);
     }
 
     private static bool ContainsPair(IReadOnlyList<string> args, string key, string value)
@@ -358,4 +507,6 @@ public class CodexExecTests
 
         return result;
     }
+
+    private sealed record ShellScriptHandle(string ScriptPath, CodexProcessInvocation Invocation);
 }

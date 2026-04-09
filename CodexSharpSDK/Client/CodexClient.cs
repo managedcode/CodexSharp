@@ -131,11 +131,15 @@ public sealed class CodexClient : IDisposable
 
         internal void Stop()
         {
+            CodexExec? execToDispose;
             lock (_gate)
             {
                 ThrowIfDisposed();
+                execToDispose = _exec;
                 _exec = null;
             }
+
+            execToDispose?.Dispose();
         }
 
         internal CodexExec GetOrCreate(bool autoStart, Func<CodexExec> execFactory)
@@ -161,6 +165,7 @@ public sealed class CodexClient : IDisposable
 
         internal void Dispose()
         {
+            CodexExec? execToDispose;
             lock (_gate)
             {
                 if (_disposed)
@@ -168,9 +173,12 @@ public sealed class CodexClient : IDisposable
                     return;
                 }
 
+                execToDispose = _exec;
                 _exec = null;
                 _disposed = true;
             }
+
+            execToDispose?.Dispose();
         }
 
         private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, nameof(CodexClient));

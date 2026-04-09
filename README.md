@@ -138,8 +138,8 @@ When thread-level web search options are omitted, SDK does not emit a `web_searc
 
 - `CodexClient` is safe for concurrent use from multiple threads.
 - `StartAsync()` is idempotent and guarded.
-- `StopAsync()` cleanly disconnects client state.
-- `Dispose()` transitions client to `Disposed`.
+- `StopAsync()` cleanly disconnects client state and cancels in-flight runs tied to the current client connection.
+- `Dispose()` transitions client to `Disposed` and cancels in-flight runs tied to the current client connection.
 - A single `CodexThread` instance serializes turns (`RunAsync` and `RunStreamedAsync`) to prevent race conditions in shared conversation state.
 
 ## Streaming

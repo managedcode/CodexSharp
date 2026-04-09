@@ -255,6 +255,31 @@ public class CodexThreadTests
     }
 
     [Test]
+    public async Task RunAsync_StreamImages_CleansUpOwnedStreamsAndTempFilesWhenResolutionFails()
+    {
+        var firstExtension = $".cleanup-{Guid.NewGuid():N}-1";
+        var secondExtension = $".cleanup-{Guid.NewGuid():N}-2";
+        var firstStream = new TrackingMemoryStream([1, 2, 3, 4]);
+        var secondStream = new ThrowingReadStream([5, 6, 7, 8]);
+        var thread = new CodexThread(new CodexExec("codex"), new CodexOptions(), new ThreadOptions());
+
+        async Task<RunResult> Action() => await thread.RunAsync(
+        [
+            new TextInput("resolve local image inputs"),
+            LocalImageInput.FromStream(firstStream, $"first{firstExtension}"),
+            LocalImageInput.FromStream(secondStream, $"second{secondExtension}"),
+        ]);
+
+        var exception = await Assert.That(Action!).ThrowsException();
+
+        await Assert.That(exception).IsTypeOf<IOException>();
+        await Assert.That(firstStream.IsDisposed).IsTrue();
+        await Assert.That(secondStream.IsDisposed).IsTrue();
+        await Assert.That(FindTemporaryImages(firstExtension)).IsEmpty();
+        await Assert.That(FindTemporaryImages(secondExtension)).IsEmpty();
+    }
+
+    [Test]
     public Task Dispose_CanBeCalledMultipleTimes()
     {
         var exec = new CodexExec("codex");
@@ -327,5 +352,38 @@ public class CodexThreadTests
         where TAttribute : Attribute
     {
         return memberInfo.GetCustomAttribute<TAttribute>() is not null;
+    }
+
+    private static string[] FindTemporaryImages(string extension)
+    {
+        return Directory.GetFiles(Path.GetTempPath(), $"codexsharp-image-*{extension}", SearchOption.TopDirectoryOnly);
+    }
+
+    private class TrackingMemoryStream(byte[] buffer) : MemoryStream(buffer)
+    {
+        public bool IsDisposed { get; private set; }
+
+        protected override void Dispose(bool disposing)
+        {
+            IsDisposed = true;
+            base.Dispose(disposing);
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            IsDisposed = true;
+            await base.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
+    private sealed class ThrowingReadStream(byte[] buffer) : TrackingMemoryStream(buffer)
+    {
+        private static readonly IOException CopyFailureException = new("Simulated image stream failure.");
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+            => ValueTask.FromException<int>(CopyFailureException);
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            => Task.FromException<int>(CopyFailureException);
     }
 }

@@ -33,4 +33,10 @@ internal static partial class CodexExecLog
         Level = LogLevel.Warning,
         Message = "Failed to terminate Codex CLI process '{ExecutablePath}' during cleanup.")]
     public static partial void ProcessKillFailed(ILogger logger, string executablePath, Exception exception);
+
+    [LoggerMessage(
+        EventId = 1005,
+        Level = LogLevel.Warning,
+        Message = "Failed to finish reading standard error for Codex CLI process '{ExecutablePath}' during cleanup.")]
+    public static partial void StandardErrorReadFailed(ILogger logger, string executablePath, Exception exception);
 }

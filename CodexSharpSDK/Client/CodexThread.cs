@@ -504,44 +504,53 @@ public sealed class CodexThread
             var temporaryFiles = new List<string>();
             var streamsToDispose = new List<Stream>();
 
-            foreach (var image in images)
+            try
             {
-                if (image.Path is not null)
+                foreach (var image in images)
                 {
-                    resolvedPaths.Add(image.Path);
-                    continue;
-                }
+                    if (image.Path is not null)
+                    {
+                        resolvedPaths.Add(image.Path);
+                        continue;
+                    }
 
-                if (image.File is not null)
-                {
-                    resolvedPaths.Add(image.File.FullName);
-                    continue;
-                }
+                    if (image.File is not null)
+                    {
+                        resolvedPaths.Add(image.File.FullName);
+                        continue;
+                    }
 
-                if (image.Content is null)
-                {
-                    throw new InvalidOperationException("Unsupported local image input shape.");
-                }
+                    if (image.Content is null)
+                    {
+                        throw new InvalidOperationException("Unsupported local image input shape.");
+                    }
 
-                var tempPath = BuildTempImagePath(image.FileName);
-                await using (var tempFile = new FileStream(
-                                 tempPath,
-                                 FileMode.CreateNew,
-                                 FileAccess.Write,
-                                 FileShare.Read,
-                                 bufferSize: 81920,
-                                 FileOptions.Asynchronous))
-                {
-                    await image.Content.CopyToAsync(tempFile, cancellationToken).ConfigureAwait(false);
-                }
+                    var tempPath = BuildTempImagePath(image.FileName);
+                    temporaryFiles.Add(tempPath);
+                    if (!image.LeaveOpen)
+                    {
+                        streamsToDispose.Add(image.Content);
+                    }
 
-                resolvedPaths.Add(tempPath);
-                temporaryFiles.Add(tempPath);
+                    await using (var tempFile = new FileStream(
+                                     tempPath,
+                                     FileMode.CreateNew,
+                                     FileAccess.Write,
+                                     FileShare.Read,
+                                     bufferSize: 81920,
+                                     FileOptions.Asynchronous))
+                    {
+                        await image.Content.CopyToAsync(tempFile, cancellationToken).ConfigureAwait(false);
+                    }
 
-                if (!image.LeaveOpen)
-                {
-                    streamsToDispose.Add(image.Content);
+                    resolvedPaths.Add(tempPath);
                 }
+            }
+            catch
+            {
+                await DisposeStreamsAsync(logger, streamsToDispose).ConfigureAwait(false);
+                DeleteTemporaryFiles(logger, temporaryFiles);
+                throw;
             }
 
             return new ResolvedImages(logger, resolvedPaths, temporaryFiles, streamsToDispose);
@@ -549,26 +558,8 @@ public sealed class CodexThread
 
         public async ValueTask DisposeAsync()
         {
-            foreach (var stream in _streamsToDispose)
-            {
-                await stream.DisposeAsync().ConfigureAwait(false);
-            }
-
-            foreach (var tempFile in _temporaryFiles)
-            {
-                try
-                {
-                    File.Delete(tempFile);
-                }
-                catch (IOException exception)
-                {
-                    CodexThreadLog.TemporaryImageDeleteFailed(_logger, tempFile, exception);
-                }
-                catch (UnauthorizedAccessException exception)
-                {
-                    CodexThreadLog.TemporaryImageDeleteFailed(_logger, tempFile, exception);
-                }
-            }
+            await DisposeStreamsAsync(_logger, _streamsToDispose).ConfigureAwait(false);
+            DeleteTemporaryFiles(_logger, _temporaryFiles);
         }
 
         private static string BuildTempImagePath(string? fileName)
@@ -582,6 +573,42 @@ public sealed class CodexThread
             return Path.Combine(
                 Path.GetTempPath(),
                 $"codexsharp-image-{Guid.NewGuid():N}{extension}");
+        }
+
+        private static async Task DisposeStreamsAsync(ILogger? logger, IReadOnlyList<Stream> streamsToDispose)
+        {
+            var resolvedLogger = logger ?? NullLogger.Instance;
+            foreach (var stream in streamsToDispose)
+            {
+                try
+                {
+                    await stream.DisposeAsync().ConfigureAwait(false);
+                }
+                catch (Exception exception)
+                {
+                    CodexThreadLog.InputStreamDisposeFailed(resolvedLogger, exception);
+                }
+            }
+        }
+
+        private static void DeleteTemporaryFiles(ILogger? logger, IReadOnlyList<string> temporaryFiles)
+        {
+            var resolvedLogger = logger ?? NullLogger.Instance;
+            foreach (var tempFile in temporaryFiles)
+            {
+                try
+                {
+                    File.Delete(tempFile);
+                }
+                catch (IOException exception)
+                {
+                    CodexThreadLog.TemporaryImageDeleteFailed(resolvedLogger, tempFile, exception);
+                }
+                catch (UnauthorizedAccessException exception)
+                {
+                    CodexThreadLog.TemporaryImageDeleteFailed(resolvedLogger, tempFile, exception);
+                }
+            }
         }
     }
 }

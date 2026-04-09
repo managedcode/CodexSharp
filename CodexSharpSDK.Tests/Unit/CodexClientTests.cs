@@ -1,5 +1,6 @@
 using ManagedCode.CodexSharpSDK.Client;
 using ManagedCode.CodexSharpSDK.Configuration;
+using ManagedCode.CodexSharpSDK.Execution;
 using ManagedCode.CodexSharpSDK.Models;
 using ManagedCode.CodexSharpSDK.Tests.Shared;
 
@@ -188,6 +189,24 @@ public class CodexClientTests
     }
 
     [Test]
+    public async Task StopAsync_CancelsActiveRun()
+    {
+        var runner = new BlockingProcessRunner();
+        using var client = CreateClientWithRunner(runner);
+        var thread = client.StartThread();
+
+        var runTask = thread.RunAsync("long-running");
+        await runner.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        await client.StopAsync();
+
+        var exception = await Assert.That(async () => await runTask).ThrowsException();
+        await Assert.That(exception).IsTypeOf<OperationCanceledException>();
+        await runner.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await Assert.That(client.State).IsEqualTo(CodexClientState.Disconnected);
+    }
+
+    [Test]
     public async Task Dispose_SetsDisposedStateAndBlocksOperations()
     {
         var client = new CodexClient(new CodexClientOptions
@@ -225,6 +244,24 @@ public class CodexClientTests
             .ToArray();
 
         await Task.WhenAll(disposals);
+        await Assert.That(client.State).IsEqualTo(CodexClientState.Disposed);
+    }
+
+    [Test]
+    public async Task Dispose_CancelsActiveRun()
+    {
+        var runner = new BlockingProcessRunner();
+        var client = CreateClientWithRunner(runner);
+        var thread = client.StartThread();
+
+        var runTask = thread.RunAsync("long-running");
+        await runner.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        client.Dispose();
+
+        var exception = await Assert.That(async () => await runTask).ThrowsException();
+        await Assert.That(exception).IsTypeOf<OperationCanceledException>();
+        await runner.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(2));
         await Assert.That(client.State).IsEqualTo(CodexClientState.Disposed);
     }
 
@@ -291,5 +328,45 @@ public class CodexClientTests
 
         await Assert.That(secondResult.Usage).IsNotNull();
         await Assert.That(resumedThread.Id).IsEqualTo(threadId);
+    }
+
+    private static CodexClient CreateClientWithRunner(ICodexProcessRunner runner)
+    {
+        return new CodexClient(
+            new CodexClientOptions
+            {
+                AutoStart = false,
+                CodexOptions = new CodexOptions
+                {
+                    CodexExecutablePath = "codex",
+                },
+            },
+            new CodexExec("codex", null, null, runner));
+    }
+
+    private sealed class BlockingProcessRunner : ICodexProcessRunner
+    {
+        public TaskCompletionSource<bool> Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource<bool> CancellationObserved { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async IAsyncEnumerable<string> RunAsync(
+            CodexProcessInvocation invocation,
+            Microsoft.Extensions.Logging.ILogger logger,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            Started.TrySetResult(true);
+            yield return "{\"type\":\"thread.started\",\"thread_id\":\"thread_1\"}";
+
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                CancellationObserved.TrySetResult(true);
+                throw;
+            }
+        }
     }
 }
