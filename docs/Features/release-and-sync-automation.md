@@ -47,7 +47,7 @@ Keep package quality and upstream Codex CLI parity automatically verified throug
 - Completing a Codex CLI sync issue must update the pinned `submodules/openai-codex` commit after validation.
 - Sync issue body must derive flag changes from CLI source snapshots, model changes from the bundled `models.json` catalog (`codex-rs/models-manager/models.json` in current upstream, with fallback to `codex-rs/core/models.json` for older pins), and feature changes from `codex-rs/core/config.schema.json` so alerts stay actionable.
 - SDK model constants must cover every bundled slug from the pinned `submodules/openai-codex` `models.json` catalog whenever upstream Codex repo sync work updates the pinned submodule.
-- Sync issue must assign Copilot by default.
+- Sync issue must stay unassigned by default unless repository configuration explicitly provides an assignee.
 - Sync issue automation must keep at most one open `codex-cli-sync` issue at a time by updating the active issue and closing superseded ones when upstream advances again.
 
 ---

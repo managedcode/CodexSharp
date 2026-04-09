@@ -218,7 +218,7 @@ jobs:
           CHANGED_FLAGS: ${{ steps.detect.outputs.changed_flags }}
           CHANGED_MODELS: ${{ steps.detect.outputs.changed_models }}
           CHANGED_FEATURES: ${{ steps.detect.outputs.changed_features }}
-          ASSIGNEE: ${{ vars.SDK_SYNC_ASSIGNEE != '' && vars.SDK_SYNC_ASSIGNEE || 'copilot' }}
+          ASSIGNEE: ${{ vars.SDK_SYNC_ASSIGNEE }}
         with:
           script: |
             const currentSha = process.env.CURRENT_SHA;
@@ -229,7 +229,7 @@ jobs:
             const changedFlags = process.env.CHANGED_FLAGS || '- (not provided)';
             const changedModels = process.env.CHANGED_MODELS || '- (not provided)';
             const changedFeatures = process.env.CHANGED_FEATURES || '- (not provided)';
-            const assignee = process.env.ASSIGNEE || 'copilot';
+            const assignee = (process.env.ASSIGNEE || '').trim();
 
             const shortCurrent = currentSha.slice(0, 7);
             const shortLatest = latestSha.slice(0, 7);
@@ -332,50 +332,65 @@ jobs:
                 labels: [labelName],
               });
 
-              try {
-                await github.rest.issues.addAssignees({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: reusableIssue.number,
-                  assignees: [assignee],
-                });
-                core.info(`Updated existing sync issue #${reusableIssue.number} and assigned @${assignee}`);
-              } catch (error) {
-                core.warning(`Issue assignment failed (${error.message}) for #${reusableIssue.number}.`);
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: reusableIssue.number,
-                  body: `Could not auto-assign @${assignee}. Please assign manually.`,
-                });
+              if (assignee) {
+                try {
+                  await github.rest.issues.addAssignees({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: reusableIssue.number,
+                    assignees: [assignee],
+                  });
+                  core.info(`Updated existing sync issue #${reusableIssue.number} and assigned @${assignee}`);
+                } catch (error) {
+                  core.warning(`Issue assignment failed (${error.message}) for #${reusableIssue.number}.`);
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: reusableIssue.number,
+                    body: `Could not auto-assign @${assignee}. Please assign manually.`,
+                  });
+                }
+              } else {
+                core.info(`Updated existing sync issue #${reusableIssue.number} without assignee.`);
               }
             } else {
-              try {
-                issue = await github.rest.issues.create({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  title,
-                  body,
-                  labels: [labelName],
-                  assignees: [assignee],
-                });
-                core.info(`Created and assigned issue #${issue.data.number} to @${assignee}`);
-              } catch (error) {
-                core.warning(`Issue assignment failed (${error.message}), creating without assignee.`);
-                issue = await github.rest.issues.create({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  title,
-                  body,
-                  labels: [labelName],
-                });
+              if (assignee) {
+                try {
+                  issue = await github.rest.issues.create({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    title,
+                    body,
+                    labels: [labelName],
+                    assignees: [assignee],
+                  });
+                  core.info(`Created and assigned issue #${issue.data.number} to @${assignee}`);
+                } catch (error) {
+                  core.warning(`Issue assignment failed (${error.message}), creating without assignee.`);
+                  issue = await github.rest.issues.create({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    title,
+                    body,
+                    labels: [labelName],
+                  });
 
-                await github.rest.issues.createComment({
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.data.number,
+                    body: `Could not auto-assign @${assignee}. Please assign manually.`,
+                  });
+                }
+              } else {
+                issue = await github.rest.issues.create({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  issue_number: issue.data.number,
-                  body: `Could not auto-assign @${assignee}. Please assign manually.`,
+                  title,
+                  body,
+                  labels: [labelName],
                 });
+                core.info(`Created sync issue #${issue.data.number} without assignee.`);
               }
             }
 

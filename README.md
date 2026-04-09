@@ -99,7 +99,7 @@ var thread = client.StartThread(new ThreadOptions
 
 `Ephemeral = false` forces rollout persistence even if your Codex config/profile enables `ephemeral = true`.
 
-SDK turns still run through non-interactive `codex exec`, so the default CLI/App history views may hide them. To reopen a persisted SDK session outside the SDK, use `codex resume <threadId>` directly or `codex resume --include-non-interactive`.
+SDK turns still run through non-interactive `codex exec`, so the default CLI/App history views may hide them. To reopen a persisted SDK session outside the SDK, use `codex resume <threadId>` directly.
 
 ## Codex CLI Metadata
 

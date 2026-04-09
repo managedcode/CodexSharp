@@ -89,7 +89,7 @@ If no new rule is detected -> do not update the file.
 - When asked to fix review findings, close every confirmed finding in the same pass; do not leave partial fixes.
 - Do not keep or add public sample projects; repository focus is SDK + tests only.
 - Upstream sync automation must track real `openai/codex` CLI changes (flags/models/features), not TypeScript SDK surface diffs, and open actionable repository issues for required SDK follow-up.
-- Automatically opened upstream sync issues must include change summary/checklist and assign Copilot by default.
+- Automatically opened upstream sync issues must include change summary/checklist and stay unassigned unless the user explicitly requests an assignee.
 - For `openai/codex` repo sync/update work, always inspect the bundled `models.json` catalog in `submodules/openai-codex` (prefer `codex-rs/models-manager/models.json`, fall back to `codex-rs/core/models.json` for older pins) and reconcile SDK model constants against that repo-authoritative source.
 - At the end of implementation/code-change tasks, create a git commit unless the user explicitly says not to, so the workspace ends in a reviewable state.
 - Run verification in this order:

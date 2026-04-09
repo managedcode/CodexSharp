@@ -47,7 +47,7 @@ Provide deterministic thread-based execution over Codex CLI so C# consumers can 
 - Codex executable resolution is deterministic: prefer npm-vendored native binary, then PATH lookup; on Windows PATH lookup checks `codex.exe`, `codex.cmd`, `codex.bat`, then `codex`.
 - Thread options map full Codex CLI flags (`profile`, `enable/disable`, OSS provider, ephemeral/color/progress/output options), plus raw `AdditionalCliArguments` passthrough for forward-compatible flags.
 - Explicit `ThreadOptions.Ephemeral = false` must override inherited Codex config/profile `ephemeral = true`, so SDK callers can force persistent rollout storage deterministically.
-- Non-ephemeral SDK runs persist as non-interactive `codex exec` sessions; they remain resumable by thread id, but Codex CLI pickers may require `codex resume --include-non-interactive` to list them.
+- Non-ephemeral SDK runs persist as non-interactive `codex exec` sessions; they remain resumable by thread id even when default CLI/App history pickers do not show them.
 - If thread web search options are not set, SDK does not emit `web_search` overrides and keeps effective CLI/config setting unchanged.
 - Cleanup failures are never silently swallowed; process/schema/image cleanup issues are logged through `ILogger`.
 
