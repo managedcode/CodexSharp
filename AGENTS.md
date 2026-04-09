@@ -224,6 +224,7 @@ If no new rule is detected -> do not update the file.
 - Full test coverage for new logic
 - Clear docs with diagrams and direct code links
 - Simple onboarding examples first, advanced configuration later.
+- For local manual SDK verification, prefer the cheapest currently supported Codex model unless the scenario specifically requires another model.
 
 ### Dislikes
 
