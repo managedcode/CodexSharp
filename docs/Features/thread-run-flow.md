@@ -40,6 +40,7 @@ Provide deterministic thread-based execution over Codex CLI so C# consumers can 
 - Invalid JSONL event lines must fail fast with parse context.
 - Protocol tokens are parsed via constants, not inline literals.
 - Parser must support `collab_tool_call` items emitted by multi-agent operations.
+- Parser must accept `file_change` lifecycle statuses across started/completed events, including `in_progress` payloads emitted before patch application finishes.
 - Optional `ILogger` (`Microsoft.Extensions.Logging`) receives process lifecycle diagnostics (start/success/failure/cancellation).
 - Structured output uses typed `StructuredOutputSchema` models (including DTO property selectors) that are serialized to CLI JSON schema files.
 - `LocalImageInput` accepts image path, `FileInfo`, or `Stream`; stream inputs are materialized to temp files and cleaned after run.

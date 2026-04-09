@@ -20,6 +20,7 @@ public class ThreadEventParserPerformanceTests
         """{"type":"item.completed","item":{"id":"cmd_1","type":"command_execution","command":"ls","aggregated_output":"","status":"in_progress"}}""",
         """{"type":"item.completed","item":{"id":"cmd_2","type":"command_execution","command":"ls","aggregated_output":"done","exit_code":0,"status":"completed"}}""",
         """{"type":"item.completed","item":{"id":"cmd_3","type":"command_execution","command":"ls","aggregated_output":"boom","exit_code":1,"status":"failed"}}""",
+        """{"type":"item.started","item":{"id":"change_0","type":"file_change","changes":[{"path":"progress.txt","kind":"add"}],"status":"in_progress"}}""",
         """{"type":"item.completed","item":{"id":"change_1","type":"file_change","changes":[{"path":"a.txt","kind":"add"},{"path":"b.txt","kind":"update"},{"path":"c.txt","kind":"delete"}],"status":"completed"}}""",
         """{"type":"item.completed","item":{"id":"change_2","type":"file_change","changes":[{"path":"d.txt","kind":"update"}],"status":"failed"}}""",
         """{"type":"item.completed","item":{"id":"mcp_1","type":"mcp_tool_call","server":"srv","tool":"tool","arguments":{"x":1},"result":{"content":[{"type":"text","text":"ok"}],"structured_content":{"ok":true}},"status":"in_progress"}}""",
@@ -114,6 +115,7 @@ public class ThreadEventParserPerformanceTests
         ]);
         await Assert.That(patchStatuses).IsEquivalentTo(
         [
+            PatchApplyStatus.InProgress,
             PatchApplyStatus.Completed,
             PatchApplyStatus.Failed,
         ]);

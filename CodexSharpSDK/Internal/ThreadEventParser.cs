@@ -256,6 +256,7 @@ internal static class ThreadEventParser
     {
         return status switch
         {
+            CodexProtocolConstants.Statuses.InProgress => PatchApplyStatus.InProgress,
             CodexProtocolConstants.Statuses.Completed => PatchApplyStatus.Completed,
             CodexProtocolConstants.Statuses.Failed => PatchApplyStatus.Failed,
             _ => throw new InvalidOperationException($"Unsupported patch apply status: {status}"),

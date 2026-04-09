@@ -68,6 +68,22 @@ public class ThreadEventParserTests
     }
 
     [Test]
+    public async Task Parse_FileChangeStartedWithInProgressStatus_IsSupported()
+    {
+        var parsed = ThreadEventParser.Parse(
+            "{\"type\":\"item.started\",\"item\":{\"id\":\"item_1\",\"type\":\"file_change\",\"changes\":[{\"path\":\"C:/git/CodexSandbox/apple.txt\",\"kind\":\"add\"},{\"path\":\"C:/git/CodexSandbox/banana.txt\",\"kind\":\"add\"}],\"status\":\"in_progress\"}}");
+
+        var item = (FileChangeItem)((ItemStartedEvent)parsed).Item;
+
+        await Assert.That(item.Id).IsEqualTo("item_1");
+        await Assert.That(item.Status).IsEqualTo(PatchApplyStatus.InProgress);
+        await Assert.That(item.Changes.Select(change => change.Path))
+            .IsEquivalentTo(["C:/git/CodexSandbox/apple.txt", "C:/git/CodexSandbox/banana.txt"]);
+        await Assert.That(item.Changes.Select(change => change.Kind))
+            .IsEquivalentTo([PatchChangeKind.Add, PatchChangeKind.Add]);
+    }
+
+    [Test]
     public async Task Parse_ParsesCollabToolCallDetails()
     {
         var parsed = ThreadEventParser.Parse(
