@@ -18,6 +18,7 @@ Verify `ManagedCode.CodexSharpSDK` behavior against real Codex CLI contracts, wi
 - Smoke coverage validates both `codex --help` and `codex exec --help` before unauthenticated login checks.
 - Cross-platform CI smoke also validates unauthenticated behavior in an isolated profile (`codex login status` must report `Not logged in`), proving binary discovery + process launch without relying on local credentials.
 - Real integration runs must use existing Codex CLI login/session; test harness does not use API key environment variables.
+- Real integration runs clone local Codex auth artifacts into isolated `tests/.sandbox/*/.codex` homes so user-specific MCP server config/plugins do not destabilize SDK verification while still using the existing local login/session.
 - Real integration model selection must be explicit: set `CODEX_TEST_MODEL` or define `model` in `~/.codex/config.toml` (no hardcoded fallback model).
 - Cover error paths and cancellation paths.
 - Keep protocol parser coverage for all supported event/item kinds.

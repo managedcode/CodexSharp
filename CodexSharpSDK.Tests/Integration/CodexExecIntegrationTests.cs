@@ -14,9 +14,9 @@ public class CodexExecIntegrationTests
     [Test]
     public async Task RunAsync_UsesDefaultProcessRunner_EndToEnd()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        var exec = new CodexExec();
+        var exec = RealCodexTestSupport.CreateExec(settings);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 
         var lines = await DrainToListAsync(exec.RunAsync(new CodexExecArgs
@@ -37,9 +37,9 @@ public class CodexExecIntegrationTests
     [Test]
     public async Task RunAsync_SecondCallPassesResumeArgument_EndToEnd()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        using var client = RealCodexTestSupport.CreateClient();
+        using var client = RealCodexTestSupport.CreateClient(settings);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(3));
 
         var thread = client.StartThread(new ThreadOptions
@@ -70,9 +70,9 @@ public class CodexExecIntegrationTests
     [Test]
     public async Task RunAsync_PropagatesNonZeroExitCode_EndToEnd()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        var exec = new CodexExec();
+        var exec = RealCodexTestSupport.CreateExec(settings);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 
         var action = async () => await DrainAsync(exec.RunAsync(new CodexExecArgs

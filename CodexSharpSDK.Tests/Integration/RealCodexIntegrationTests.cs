@@ -12,9 +12,9 @@ public class RealCodexIntegrationTests
     [Test]
     public async Task RunAsync_WithRealCodexCli_ReturnsStructuredOutput()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        using var client = RealCodexTestSupport.CreateClient();
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
 
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
@@ -33,9 +33,9 @@ public class RealCodexIntegrationTests
     [Test]
     public async Task RunStreamedAsync_WithRealCodexCli_YieldsCompletedTurnEvent()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        using var client = RealCodexTestSupport.CreateClient();
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 
@@ -63,9 +63,9 @@ public class RealCodexIntegrationTests
     [Test]
     public async Task RunAsync_WithRealCodexCli_SecondTurnKeepsThreadId()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        using var client = RealCodexTestSupport.CreateClient();
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(3));
 
@@ -95,9 +95,9 @@ public class RealCodexIntegrationTests
     [Test]
     public async Task RunAsync_WithExplicitNonEphemeralOverride_PersistsRolloutWhenClientConfigEnablesEphemeral()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        using var client = RealCodexTestSupport.CreateClient(new CodexOptions
+        using var client = RealCodexTestSupport.CreateClient(settings, new CodexOptions
         {
             Config = new JsonObject
             {
@@ -123,6 +123,7 @@ public class RealCodexIntegrationTests
         await Assert.That(thread.Id).IsNotNull();
 
         var rolloutPath = await RealCodexTestSupport.FindPersistedRolloutPathAsync(
+            settings,
             thread.Id!,
             TimeSpan.FromSeconds(10));
 

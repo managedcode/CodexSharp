@@ -291,9 +291,9 @@ public class CodexClientTests
     [Property("RequiresCodexAuth", "true")]
     public async Task ResumeThread_WithThreadOptions_RunsWithRealCodexCli()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        using var client = RealCodexTestSupport.CreateClient();
+        using var client = RealCodexTestSupport.CreateClient(settings);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(3));
 
         var startedThread = client.StartThread(new ThreadOptions

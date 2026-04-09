@@ -15,9 +15,9 @@ public class CodexThreadTests
     [Property("RequiresCodexAuth", "true")]
     public async Task RunAsync_WithRealCodexCli_ReturnsCompletedTurnAndUpdatesThreadId()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        using var client = RealCodexTestSupport.CreateClient();
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 
@@ -34,9 +34,9 @@ public class CodexThreadTests
     [Property("RequiresCodexAuth", "true")]
     public async Task RunAsync_WithStructuredInput_ReturnsTypedJson()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        using var client = RealCodexTestSupport.CreateClient();
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 
@@ -58,9 +58,9 @@ public class CodexThreadTests
     [Property("RequiresCodexAuth", "true")]
     public async Task RunAsync_GenericStructuredOutput_ReturnsTypedResponse()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        using var client = RealCodexTestSupport.CreateClient();
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 
@@ -84,9 +84,9 @@ public class CodexThreadTests
     [Property("RequiresCodexAuth", "true")]
     public async Task RunAsync_GenericStructuredOutput_WithSchemaShortcutAndStringInput_ReturnsTypedResponse()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        using var client = RealCodexTestSupport.CreateClient();
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 
@@ -106,9 +106,9 @@ public class CodexThreadTests
     [Property("RequiresCodexAuth", "true")]
     public async Task RunAsync_SecondTurnKeepsThreadId_WithRealCodexCli()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        using var client = RealCodexTestSupport.CreateClient();
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(3));
 
@@ -132,9 +132,9 @@ public class CodexThreadTests
     [Property("RequiresCodexAuth", "true")]
     public async Task RunStreamedAsync_YieldsCompletedTurnEvent_WithRealCodexCli()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        using var client = RealCodexTestSupport.CreateClient();
+        using var client = RealCodexTestSupport.CreateClient(settings);
         var thread = StartRealIntegrationThread(client, settings.Model);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 

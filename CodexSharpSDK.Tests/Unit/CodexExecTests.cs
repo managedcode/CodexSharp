@@ -279,9 +279,9 @@ public class CodexExecTests
     [Property("RequiresCodexAuth", "true")]
     public async Task RunAsync_WithNullLogger_CompletesSuccessfully_WithRealCodexCli()
     {
-        var settings = RealCodexTestSupport.GetRequiredSettings();
+        using var settings = RealCodexTestSupport.GetRequiredSettings();
 
-        var exec = new CodexExec(logger: NullLogger.Instance);
+        var exec = RealCodexTestSupport.CreateExec(settings, NullLogger.Instance);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 
         var lines = await DrainToListAsync(exec.RunAsync(new CodexExecArgs
