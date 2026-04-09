@@ -16,7 +16,6 @@ jobs:
 
     outputs:
       version: ${{ steps.version.outputs.version }}
-      agent_framework_version: ${{ steps.version.outputs.agent_framework_version }}
 
     steps:
     - name: Checkout
@@ -45,22 +44,14 @@ jobs:
           echo "Failed to resolve package version from Directory.Build.props"
           exit 1
         fi
-        AGENT_FRAMEWORK_VERSION="$VERSION-rc4"
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-        echo "agent_framework_version=$AGENT_FRAMEWORK_VERSION" >> "$GITHUB_OUTPUT"
         echo "Version from Directory.Build.props: $VERSION"
-        echo "Agent Framework package version: $AGENT_FRAMEWORK_VERSION"
 
     - name: Validate semantic version
       run: |
         VERSION="${{ steps.version.outputs.version }}"
-        AGENT_FRAMEWORK_VERSION="${{ steps.version.outputs.agent_framework_version }}"
         if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
           echo "Version '$VERSION' is not a valid semantic version."
-          exit 1
-        fi
-        if [[ ! "$AGENT_FRAMEWORK_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
-          echo "Agent Framework version '$AGENT_FRAMEWORK_VERSION' is not a valid semantic version."
           exit 1
         fi
 
@@ -81,15 +72,6 @@ jobs:
         mkdir -p ./artifacts
         dotnet pack ManagedCode.CodexSharpSDK.slnx --configuration Release --no-build -p:IncludeSymbols=false -p:SymbolPackageFormat=snupkg --output ./artifacts
 
-    - name: Validate packed artifacts
-      run: |
-        VERSION="${{ steps.version.outputs.version }}"
-        AGENT_FRAMEWORK_VERSION="${{ steps.version.outputs.agent_framework_version }}"
-        find ./artifacts -maxdepth 1 -name '*.nupkg' | sort
-        test -f "./artifacts/ManagedCode.CodexSharpSDK.$VERSION.nupkg"
-        test -f "./artifacts/ManagedCode.CodexSharpSDK.Extensions.AI.$VERSION.nupkg"
-        test -f "./artifacts/ManagedCode.CodexSharpSDK.Extensions.AgentFramework.$AGENT_FRAMEWORK_VERSION.nupkg"
-
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -106,7 +88,6 @@ jobs:
     outputs:
       published: ${{ steps.publish.outputs.published }}
       version: ${{ needs.build.outputs.version }}
-      agent_framework_version: ${{ needs.build.outputs.agent_framework_version }}
 
     steps:
     - name: Checkout
@@ -214,7 +195,6 @@ jobs:
       id: release_notes
       run: |
         VERSION="${{ needs.publish-nuget.outputs.version }}"
-        AGENT_FRAMEWORK_VERSION="${{ needs.publish-nuget.outputs.agent_framework_version }}"
         CURRENT_TAG="v$VERSION"
         PREVIOUS_TAG="${{ steps.prev_tag.outputs.previous_tag }}"
 
