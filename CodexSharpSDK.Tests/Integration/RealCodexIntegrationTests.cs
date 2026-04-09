@@ -1,4 +1,6 @@
+using System.Text.Json.Nodes;
 using ManagedCode.CodexSharpSDK.Client;
+using ManagedCode.CodexSharpSDK.Configuration;
 using ManagedCode.CodexSharpSDK.Models;
 using ManagedCode.CodexSharpSDK.Tests.Shared;
 
@@ -88,6 +90,43 @@ public class RealCodexIntegrationTests
         await Assert.That(second.TypedResponse.Status).IsEqualTo("ok");
         await Assert.That(second.Usage).IsNotNull();
         await Assert.That(thread.Id).IsEqualTo(firstThreadId);
+    }
+
+    [Test]
+    public async Task RunAsync_WithExplicitNonEphemeralOverride_PersistsRolloutWhenClientConfigEnablesEphemeral()
+    {
+        var settings = RealCodexTestSupport.GetRequiredSettings();
+
+        using var client = RealCodexTestSupport.CreateClient(new CodexOptions
+        {
+            Config = new JsonObject
+            {
+                ["ephemeral"] = true,
+            },
+        });
+        var thread = client.StartThread(new ThreadOptions
+        {
+            Model = settings.Model,
+            ModelReasoningEffort = ModelReasoningEffort.Medium,
+            WebSearchMode = WebSearchMode.Disabled,
+            SandboxMode = SandboxMode.WorkspaceWrite,
+            NetworkAccessEnabled = true,
+            Ephemeral = false,
+        });
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+
+        var result = await thread.RunAsync(
+            "Reply with short plain text: ok.",
+            new TurnOptions { CancellationToken = cancellation.Token });
+
+        await Assert.That(result.Usage).IsNotNull();
+        await Assert.That(thread.Id).IsNotNull();
+
+        var rolloutPath = await RealCodexTestSupport.FindPersistedRolloutPathAsync(
+            thread.Id!,
+            TimeSpan.FromSeconds(10));
+
+        await Assert.That(rolloutPath).IsNotNull();
     }
 
     private static CodexThread StartRealIntegrationThread(CodexClient client, string model)

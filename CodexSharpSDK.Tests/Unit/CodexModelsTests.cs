@@ -8,6 +8,11 @@ public class CodexModelsTests
 {
     private const string SolutionFileName = "ManagedCode.CodexSharpSDK.slnx";
     private const string BundledModelsFileName = "models.json";
+    private static readonly string[] BundledModelsRelativePaths =
+    [
+        Path.Combine("submodules", "openai-codex", "codex-rs", "models-manager", BundledModelsFileName),
+        Path.Combine("submodules", "openai-codex", "codex-rs", "core", BundledModelsFileName),
+    ];
 
     [Test]
     public async Task CodexModels_ContainAllBundledUpstreamModelSlugs()
@@ -17,8 +22,12 @@ public class CodexModelsTests
         var missingBundledSlugs = bundledModelSlugs
             .Except(sdkModelSlugs, StringComparer.Ordinal)
             .ToArray();
+        var extraSdkSlugs = sdkModelSlugs
+            .Except(bundledModelSlugs, StringComparer.Ordinal)
+            .ToArray();
 
         await Assert.That(missingBundledSlugs).IsEmpty();
+        await Assert.That(extraSdkSlugs).IsEmpty();
     }
 
     private static string[] GetSdkModelSlugs()
@@ -46,13 +55,17 @@ public class CodexModelsTests
 
     private static string ResolveBundledModelsFilePath()
     {
-        return Path.Combine(
-            ResolveRepositoryRootPath(),
-            "submodules",
-            "openai-codex",
-            "codex-rs",
-            "core",
-            BundledModelsFileName);
+        var repositoryRootPath = ResolveRepositoryRootPath();
+        foreach (var relativePath in BundledModelsRelativePaths)
+        {
+            var candidatePath = Path.Combine(repositoryRootPath, relativePath);
+            if (File.Exists(candidatePath))
+            {
+                return candidatePath;
+            }
+        }
+
+        throw new InvalidOperationException("Could not locate bundled upstream models.json under the openai-codex submodule.");
     }
 
     private static string ResolveRepositoryRootPath()

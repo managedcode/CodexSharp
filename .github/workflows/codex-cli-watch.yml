@@ -32,8 +32,11 @@ jobs:
           set -euo pipefail
 
           SUBMODULE_PATH="submodules/openai-codex"
-          MODELS_FILE="codex-rs/core/models.json"
           CONFIG_SCHEMA_FILE="codex-rs/core/config.schema.json"
+          MODEL_SOURCE_PATHS=(
+            "codex-rs/models-manager/models.json"
+            "codex-rs/core/models.json"
+          )
           FLAG_SOURCE_PATHS=(
             "codex-rs/cli/src/main.rs"
             "codex-rs/exec/src/cli.rs"
@@ -44,6 +47,21 @@ jobs:
             local sha="$1"
             local path="$2"
             git -C "$SUBMODULE_PATH" show "$sha:$path" 2>/dev/null || true
+          }
+
+          read_first_existing_file_at_sha() {
+            local sha="$1"
+            shift
+            local path
+
+            for path in "$@"; do
+              if git -C "$SUBMODULE_PATH" cat-file -e "$sha:$path" 2>/dev/null; then
+                read_file_at_sha "$sha" "$path"
+                return 0
+              fi
+            done
+
+            return 0
           }
 
           extract_flag_snapshot() {
@@ -57,7 +75,7 @@ jobs:
 
           extract_model_snapshot() {
             local sha="$1"
-            read_file_at_sha "$sha" "$MODELS_FILE" \
+            read_first_existing_file_at_sha "$sha" "${MODEL_SOURCE_PATHS[@]}" \
               | jq -r '.models[]? | (.id // .slug // empty)' \
               | sed '/^$/d' \
               | sort -u || true
@@ -250,7 +268,8 @@ jobs:
               per_page: 100,
             });
 
-            const duplicate = openIssues.find(issue =>
+            const syncIssues = openIssues.filter(issue => !issue.pull_request);
+            const duplicate = syncIssues.find(issue =>
               !issue.pull_request && issue.body && issue.body.includes(marker)
             );
 
@@ -258,6 +277,11 @@ jobs:
               core.info(`Issue already exists for ${latestSha}: #${duplicate.number}`);
               return;
             }
+
+            const reusableIssue = [...syncIssues]
+              .sort((left, right) => {
+                return new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime();
+              })[0];
 
             const title = `Sync Codex CLI upstream changes (${shortCurrent} -> ${shortLatest})`;
             const body = [
@@ -289,6 +313,7 @@ jobs:
               '',
               '## Action required',
               '- [ ] Validate latest `codex --help` and `codex exec --help` output',
+              '- [ ] Validate latest `codex features list` output',
               '- [ ] Sync C# SDK constants/options/models with upstream CLI changes',
               '- [ ] Add or update tests for new flags/models/features',
               '- [ ] Update docs (README + docs/Features + docs/Architecture if needed)',
@@ -297,31 +322,80 @@ jobs:
             ].join('\n');
 
             let issue;
-            try {
-              issue = await github.rest.issues.create({
+            if (reusableIssue) {
+              issue = await github.rest.issues.update({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                title,
-                body,
-                labels: [labelName],
-                assignees: [assignee],
-              });
-              core.info(`Created and assigned issue #${issue.data.number} to @${assignee}`);
-            } catch (error) {
-              core.warning(`Issue assignment failed (${error.message}), creating without assignee.`);
-              issue = await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+                issue_number: reusableIssue.number,
                 title,
                 body,
                 labels: [labelName],
               });
 
+              try {
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: reusableIssue.number,
+                  assignees: [assignee],
+                });
+                core.info(`Updated existing sync issue #${reusableIssue.number} and assigned @${assignee}`);
+              } catch (error) {
+                core.warning(`Issue assignment failed (${error.message}) for #${reusableIssue.number}.`);
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: reusableIssue.number,
+                  body: `Could not auto-assign @${assignee}. Please assign manually.`,
+                });
+              }
+            } else {
+              try {
+                issue = await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title,
+                  body,
+                  labels: [labelName],
+                  assignees: [assignee],
+                });
+                core.info(`Created and assigned issue #${issue.data.number} to @${assignee}`);
+              } catch (error) {
+                core.warning(`Issue assignment failed (${error.message}), creating without assignee.`);
+                issue = await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title,
+                  body,
+                  labels: [labelName],
+                });
+
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.data.number,
+                  body: `Could not auto-assign @${assignee}. Please assign manually.`,
+                });
+              }
+            }
+
+            for (const staleIssue of syncIssues) {
+              if (staleIssue.number === issue.data.number) {
+                continue;
+              }
+
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: issue.data.number,
-                body: `Could not auto-assign @${assignee}. Please assign manually.`,
+                issue_number: staleIssue.number,
+                body: `Superseded by #${issue.data.number} for newer upstream Codex CLI commit \`${shortLatest}\`.`,
+              });
+
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: staleIssue.number,
+                state: 'closed',
               });
             }
 

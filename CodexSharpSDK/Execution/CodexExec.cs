@@ -39,6 +39,7 @@ public sealed class CodexExec
     private const string SandboxNetworkAccessConfigKey = "sandbox_workspace_write.network_access";
     private const string WebSearchConfigKey = "web_search";
     private const string ApprovalPolicyConfigKey = "approval_policy";
+    private const string EphemeralConfigKey = "ephemeral";
     private const string WebSearchLiveValue = "live";
     private const string WebSearchDisabledValue = "disabled";
     private const string BooleanTrueLiteral = "true";
@@ -218,9 +219,17 @@ public sealed class CodexExec
             commandArgs.Add(DangerouslyBypassApprovalsAndSandboxFlag);
         }
 
-        if (args.Ephemeral)
+        if (args.HasEphemeralOverride)
         {
-            commandArgs.Add(EphemeralFlag);
+            if (args.Ephemeral)
+            {
+                commandArgs.Add(EphemeralFlag);
+            }
+            else
+            {
+                commandArgs.Add(ConfigFlag);
+                commandArgs.Add(BuildBooleanConfig(EphemeralConfigKey, false));
+            }
         }
 
         if (args.Color.HasValue)

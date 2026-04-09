@@ -152,6 +152,28 @@ public class CodexExecTests
     }
 
     [Test]
+    public async Task BuildCommandArgs_ExplicitFalseEphemeral_OverridesConfigPersistence()
+    {
+        var exec = new CodexExec(
+            executablePath: "codex",
+            environmentOverride: null,
+            configOverrides: new JsonObject
+            {
+                ["ephemeral"] = true,
+            });
+
+        var commandArgs = exec.BuildCommandArgs(new CodexExecArgs
+        {
+            Input = "test",
+            Ephemeral = false,
+        });
+
+        await Assert.That(commandArgs.Contains("--ephemeral")).IsFalse();
+        await Assert.That(CollectConfigValues(commandArgs, "ephemeral"))
+            .IsEquivalentTo(["ephemeral=true", "ephemeral=false"]);
+    }
+
+    [Test]
     public async Task BuildCommandArgs_KeepsConfiguredWebSearchWhenThreadOverridesMissing()
     {
         var exec = new CodexExec(

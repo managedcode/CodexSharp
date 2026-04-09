@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ManagedCode.CodexSharpSDK.Client;
 using ManagedCode.CodexSharpSDK.Configuration;
 using ManagedCode.CodexSharpSDK.Internal;
@@ -19,9 +20,36 @@ internal static class RealCodexTestSupport
         return new RealCodexTestSettings(ResolveModel());
     }
 
-    public static CodexClient CreateClient()
+    public static CodexClient CreateClient(CodexOptions? options = null)
     {
-        return new CodexClient(new CodexOptions());
+        return new CodexClient(options ?? new CodexOptions());
+    }
+
+    public static async Task<string?> FindPersistedRolloutPathAsync(string threadId, TimeSpan timeout)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(threadId);
+
+        var sessionsPath = GetCodexSessionsPath();
+        if (sessionsPath is null || !Directory.Exists(sessionsPath))
+        {
+            return null;
+        }
+
+        var stopwatch = Stopwatch.StartNew();
+        while (stopwatch.Elapsed < timeout)
+        {
+            var rolloutPath = Directory
+                .EnumerateFiles(sessionsPath, $"rollout-*{threadId}.jsonl", SearchOption.AllDirectories)
+                .FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(rolloutPath))
+            {
+                return rolloutPath;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(200)).ConfigureAwait(false);
+        }
+
+        return null;
     }
 
     private static string ResolveModel()
@@ -106,6 +134,17 @@ internal static class RealCodexTestSupport
         }
 
         return Path.Combine(homeDirectory, ".codex", "config.toml");
+    }
+
+    private static string? GetCodexSessionsPath()
+    {
+        var homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (string.IsNullOrWhiteSpace(homeDirectory))
+        {
+            return null;
+        }
+
+        return Path.Combine(homeDirectory, ".codex", "sessions");
     }
 
     private static bool IsCodexAvailable()

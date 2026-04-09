@@ -4,6 +4,9 @@ namespace ManagedCode.CodexSharpSDK.Execution;
 
 public sealed record CodexExecArgs
 {
+    private bool _ephemeral;
+    private bool _hasEphemeralOverride;
+
     public required string Input { get; init; }
 
     public string? BaseUrl { get; init; }
@@ -32,7 +35,15 @@ public sealed record CodexExecArgs
 
     public bool DangerouslyBypassApprovalsAndSandbox { get; init; }
 
-    public bool Ephemeral { get; init; }
+    public bool Ephemeral
+    {
+        get => _ephemeral;
+        init
+        {
+            _ephemeral = value;
+            _hasEphemeralOverride = true;
+        }
+    }
 
     public ExecOutputColor? Color { get; init; }
 
@@ -61,4 +72,6 @@ public sealed record CodexExecArgs
     public ApprovalMode? ApprovalPolicy { get; init; }
 
     public CancellationToken CancellationToken { get; init; } = CancellationToken.None;
+
+    internal bool HasEphemeralOverride => _hasEphemeralOverride;
 }

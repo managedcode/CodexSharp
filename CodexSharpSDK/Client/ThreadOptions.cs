@@ -46,6 +46,9 @@ public enum ExecOutputColor
 
 public sealed record ThreadOptions
 {
+    private bool _ephemeral;
+    private bool _hasEphemeralOverride;
+
     public string? Model { get; init; }
 
     public SandboxMode? SandboxMode { get; init; }
@@ -76,7 +79,15 @@ public sealed record ThreadOptions
 
     public bool DangerouslyBypassApprovalsAndSandbox { get; init; }
 
-    public bool Ephemeral { get; init; }
+    public bool Ephemeral
+    {
+        get => _ephemeral;
+        init
+        {
+            _ephemeral = value;
+            _hasEphemeralOverride = true;
+        }
+    }
 
     public ExecOutputColor? Color { get; init; }
 
@@ -89,4 +100,6 @@ public sealed record ThreadOptions
     public IReadOnlyList<string>? DisabledFeatures { get; init; }
 
     public IReadOnlyList<string>? AdditionalCliArguments { get; init; }
+
+    internal bool HasEphemeralOverride => _hasEphemeralOverride;
 }
